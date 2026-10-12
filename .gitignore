@@ -1,0 +1,16 @@
+# Rust
+/target
+debug/
+release/
+
+# Cargo lock del workspace no se versiona al ser solo librerías
+# (descomentar cuando exista un binario):
+# Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Sistema
+.DS_Store

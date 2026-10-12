@@ -1,0 +1,17 @@
+[package]
+name = "rivet"
+description = "Fachada del ecosistema Rivet: re-exporta las librerías del toolkit GUI."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rivet-foundation.workspace = true
+rivet-window.workspace = true
+rivet-canvas.workspace = true
+rivet-typography.workspace = true
+rivet-image.workspace = true
+rivet-style.workspace = true
+rivet-ui.workspace = true

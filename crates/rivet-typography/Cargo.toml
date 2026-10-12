@@ -1,0 +1,11 @@
+[package]
+name = "rivet-typography"
+description = "Tipografía de Rivet: parseo TTF/OTF, rasterizado (De Casteljau + scanline), caché de glifos y métricas."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rivet-foundation.workspace = true

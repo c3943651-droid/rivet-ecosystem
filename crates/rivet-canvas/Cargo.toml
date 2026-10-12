@@ -1,0 +1,11 @@
+[package]
+name = "rivet-canvas"
+description = "Render 2D por GPU de Rivet (OpenGL 3.3 Core + EGL): shaders, geometría, texturas y efectos."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rivet-foundation.workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "rivet-image"
+description = "Carga y decodificación de imágenes de Rivet (PNG/JPEG/SVG/WebP), iconos y temas de iconos."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rivet-foundation.workspace = true

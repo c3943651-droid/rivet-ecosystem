@@ -1,0 +1,15 @@
+[package]
+name = "rivet-ui"
+description = "Widgets por composición de Rivet: layout, eventos y foco sobre nodo común + slabs por tipo."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rivet-foundation.workspace = true
+rivet-canvas.workspace = true
+rivet-typography.workspace = true
+rivet-image.workspace = true
+rivet-style.workspace = true
