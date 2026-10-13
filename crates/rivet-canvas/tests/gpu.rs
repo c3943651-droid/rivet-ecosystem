@@ -260,3 +260,52 @@ fn gpu_frame_stats_y_present() {
     ctx.present();
     assert!(presented.get());
 }
+
+#[test]
+fn gpu_circulo_y_rounded_rect() {
+    let Some(mut ctx) = make_context() else {
+        return;
+    };
+    // Círculo azul centrado sobre fondo rojo.
+    let mut queue = RenderQueue::new();
+    queue.clear_color(Some(Color::opaque(1.0, 0.0, 0.0)));
+    queue.circle(0, 32.0, 32.0, 12.0, Color::opaque(0.0, 0.0, 1.0));
+    ctx.render(&queue);
+    assert_color(
+        center_pixel(&ctx, 32, 32),
+        [0, 0, 255, 255],
+        2,
+        "centro círculo",
+    );
+    // Fuera del círculo sigue rojo.
+    assert_color(
+        center_pixel(&ctx, 4, 4),
+        [255, 0, 0, 255],
+        2,
+        "fuera círculo",
+    );
+
+    // Rect redondeado: esquina exterior NO pintada, centro sí.
+    let mut queue = RenderQueue::new();
+    queue.clear_color(Some(Color::opaque(0.0, 0.0, 0.0)));
+    queue.rounded_rect(
+        0,
+        Rect::new(16.0, 16.0, 32.0, 32.0),
+        8.0,
+        Color::opaque(0.0, 1.0, 0.0),
+    );
+    ctx.render(&queue);
+    assert_color(
+        center_pixel(&ctx, 32, 32),
+        [0, 255, 0, 255],
+        2,
+        "centro rounded",
+    );
+    // Esquina (17,17) está dentro del cuadrado de la esquina pero fuera del
+    // arco de radio 8: debe seguir negro (con tolerancia AA).
+    let corner = center_pixel(&ctx, 17, 17);
+    assert!(
+        corner[1] < 100,
+        "esquina recortada por el radio: {corner:?}"
+    );
+}

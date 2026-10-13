@@ -7,6 +7,7 @@
 //! Nivel más bajo del ecosistema: no depende de ninguna otra crate Rivet.
 #![forbid(unsafe_op_in_unsafe_fn)]
 
+pub mod channel;
 pub mod config;
 pub mod context;
 pub mod error;
@@ -15,6 +16,7 @@ pub mod logging;
 pub mod slab;
 pub mod utils;
 
+pub use channel::{channel, Receiver, Sender};
 pub use config::{Config, ConfigWatcher};
 pub use context::{Context, ContextBuilder};
 pub use error::{FoundationError, Result};

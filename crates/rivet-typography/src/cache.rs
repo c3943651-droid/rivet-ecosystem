@@ -83,7 +83,8 @@ impl GlyphCache {
             return Some(entry.0.clone());
         }
         self.stats_misses += 1;
-        let rasterized = rasterize(face, glyph, size_px)?;
+        let offset = subpixel as f32 * 0.25;
+        let rasterized = rasterize(face, glyph, size_px, offset)?;
         if self.map.len() >= self.capacity {
             self.evict_oldest();
         }

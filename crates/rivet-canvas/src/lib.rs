@@ -13,6 +13,7 @@ pub mod blur;
 pub mod color;
 pub mod error;
 pub mod geometry;
+pub mod primitives;
 pub mod queue;
 pub mod renderer;
 pub mod shader;

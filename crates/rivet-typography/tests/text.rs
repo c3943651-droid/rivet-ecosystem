@@ -168,3 +168,50 @@ fn select_or_bundled_sin_sistema() {
         .unwrap();
     assert_eq!(db.family_name(id).as_deref(), Some("Inter"));
 }
+
+#[test]
+fn subpixel_cuantizacion_y_rasterizado() {
+    // Cuantización pura (determinista, sin fuentes).
+    // (probamos vía layout con la empaquetada: bin correcto por avance fraccional)
+    let mut db = FontDb::new();
+    let id = db.load_bundled().unwrap();
+    let font = db.font(id, 24.0).unwrap();
+
+    // 1) Layout produce posiciones enteras + bin 0..3.
+    let layout = font.layout("AVATAR");
+    for g in &layout.glyphs {
+        assert_eq!(g.x, g.x.floor(), "posiciones enteras");
+        assert!(g.subpixel <= 3, "bin 0..=3");
+    }
+
+    // 2) Mismo glifo con bins distintos rasteriza distinto (subpíxel real).
+    let base = layout.glyphs[0];
+    let bin0 = font.rasterize(base).expect("contorno");
+    let mut shifted = base;
+    shifted.subpixel = 2;
+    let bin2 = font.rasterize(shifted).expect("contorno");
+    assert_eq!(
+        (bin0.width, bin0.height),
+        (bin2.width, bin2.height),
+        "mismo bbox de referencia"
+    );
+    assert_ne!(
+        bin0.coverage, bin2.coverage,
+        "el offset subpíxel debe cambiar la máscara"
+    );
+
+    // 3) La caché separa por bin: mismo glifo, dos bins = dos entradas.
+    let face = db.face(id).unwrap();
+    let mut cache = GlyphCache::new(8);
+    for bin in [0u8, 2u8] {
+        let _ = cache.get_or_raster(
+            face.data(),
+            face.index(),
+            face.face(),
+            24.0,
+            base.glyph,
+            bin,
+        );
+    }
+    assert_eq!(cache.len(), 2, "clave incluye el bin subpíxel");
+}

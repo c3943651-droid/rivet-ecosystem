@@ -14,12 +14,25 @@ pub struct PlacedGlyph {
     pub glyph: GlyphId,
     /// Índice de la cara que lo contiene (0 = primaria).
     pub face: u8,
-    /// Posición X del lápiz (borde izquierdo) en píxeles.
+    /// Posición X entera del lápiz (borde izquierdo) en píxeles.
     pub x: f32,
     /// Posición Y de la línea base en píxeles.
     pub y: f32,
     /// Avance horizontal aplicado (px).
     pub advance: f32,
+    /// Bin subpíxel horizontal (0..4 → offset 0, ¼, ½, ¾ px).
+    pub subpixel: u8,
+}
+
+/// Cuantiza una posición X a píxel entero + bin subpíxel de ¼ px.
+pub(crate) fn quantize_subpixel(x: f32) -> (f32, u8) {
+    let frac = x - x.floor();
+    let bin = (frac * 4.0).round();
+    if bin >= 4.0 {
+        (x.floor() + 1.0, 0)
+    } else {
+        (x.floor(), bin as u8)
+    }
 }
 
 /// Texto convertido a glifos posicionados (shaping simple LTR, doc §5).
@@ -128,12 +141,14 @@ impl Font {
                     x += units as f32 * self.px_per_unit();
                 }
             }
+            let (pen_x, bin) = quantize_subpixel(x);
             glyphs.push(PlacedGlyph {
                 glyph,
                 face: chosen_face,
-                x,
+                x: pen_x,
                 y: 0.0,
                 advance: 0.0,
+                subpixel: bin,
             });
             let advance =
                 glyph_advance_px(self.faces[chosen_face as usize].face(), self.size_px, glyph);
@@ -144,11 +159,17 @@ impl Font {
         TextLayout { glyphs, width: x }
     }
 
-    /// Rastreriza un glifo del layout desde su cara (sin caché).
+    /// Rastreriza un glifo del layout desde su cara (sin caché),
+    /// aplicando su bin subpíxel.
     #[must_use]
     pub fn rasterize(&self, placed: PlacedGlyph) -> Option<RasterizedGlyph> {
         let face = self.faces.get(placed.face as usize)?;
-        crate::raster::rasterize(face.face(), placed.glyph, self.size_px)
+        crate::raster::rasterize(
+            face.face(),
+            placed.glyph,
+            self.size_px,
+            placed.subpixel as f32 * 0.25,
+        )
     }
 
     fn px_per_unit(&self) -> f32 {

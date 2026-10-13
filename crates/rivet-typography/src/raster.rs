@@ -126,13 +126,17 @@ impl OutlineBuilder for OutlineCollector {
     }
 }
 
-/// Rastreriza un glifo a `size_px` píxeles.
+/// Rastreriza un glifo a `size_px` píxeles con desplazamiento subpíxel.
 ///
+/// `subpixel_offset` desplaza el contorno en X (bin × ¼ px) antes del bbox;
+/// el consumidor dibuja el resultado en la posición entera. Es el
+/// rasterizado subpíxel real (doc §4: compensa el hinting ausente).
 /// Devuelve `None` si el glifo no tiene contornos (espacio, etc.).
 pub fn rasterize(
     face: &ttf_parser::Face<'_>,
     glyph: ttf_parser::GlyphId,
     size_px: f32,
+    subpixel_offset: f32,
 ) -> Option<RasterizedGlyph> {
     let upem = face.units_per_em().max(1) as f32;
     let scale = size_px / upem;
@@ -147,7 +151,7 @@ pub fn rasterize(
     let scaled: Vec<(f32, f32)> = collector
         .points
         .iter()
-        .map(|&(x, y)| (x * scale, y * -scale))
+        .map(|&(x, y)| (x * scale + subpixel_offset, y * -scale))
         .collect();
 
     let mut min_x = f32::MAX;
@@ -161,10 +165,12 @@ pub fn rasterize(
         max_y = max_y.max(y);
     }
     const PAD: f32 = 1.0;
-    let left = min_x - PAD;
-    let top = min_y - PAD;
-    let width = (max_x - min_x + PAD * 2.0).ceil().max(1.0) as usize;
-    let height = (max_y - min_y + PAD * 2.0).ceil().max(1.0) as usize;
+    // La rejilla del bitmap se alinea a píxeles ENTEROS: así el offset
+    // subpíxel sobrevive a la traslación (left fraccional lo cancelaría).
+    let left = min_x.floor() - PAD;
+    let top = min_y.floor() - PAD;
+    let width = (max_x - left + PAD).ceil().max(1.0) as usize;
+    let height = (max_y - top + PAD).ceil().max(1.0) as usize;
 
     // Segmentos por contorno con traslación a origen del bitmap.
     let mut segments: Vec<((f32, f32), (f32, f32))> = Vec::new();

@@ -164,8 +164,13 @@ impl RenderQueue {
         self.vertex_count
     }
 
+    /// Contabilidad interna de vértices (uso de `primitives`).
+    pub(crate) fn count_vertices(&mut self, added: usize) {
+        self.vertex_count += added;
+    }
+
     /// Devuelve el lote activo, creándolo si cambia (capa, shader, textura).
-    fn batch_for(
+    pub(crate) fn batch_for(
         &mut self,
         layer: u32,
         kind: ShaderKind,
