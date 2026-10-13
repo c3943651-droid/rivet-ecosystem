@@ -13,22 +13,22 @@ fn make_gl() -> Option<GraphicsContext> {
     egl.initialize(display).ok()?;
     let mut configs = Vec::with_capacity(8);
     egl.choose_config(
-            display,
-            &[
-                khronos_egl::RED_SIZE,
-                8,
-                khronos_egl::GREEN_SIZE,
-                8,
-                khronos_egl::BLUE_SIZE,
-                8,
-                khronos_egl::ALPHA_SIZE,
-                8,
-                khronos_egl::SURFACE_TYPE,
-                khronos_egl::PBUFFER_BIT,
-                khronos_egl::NONE,
-            ],
-            &mut configs,
-        )
+        display,
+        &[
+            khronos_egl::RED_SIZE,
+            8,
+            khronos_egl::GREEN_SIZE,
+            8,
+            khronos_egl::BLUE_SIZE,
+            8,
+            khronos_egl::ALPHA_SIZE,
+            8,
+            khronos_egl::SURFACE_TYPE,
+            khronos_egl::PBUFFER_BIT,
+            khronos_egl::NONE,
+        ],
+        &mut configs,
+    )
     .ok()?;
     let config = *configs.first()?;
     egl.bind_api(khronos_egl::OPENGL_API).ok()?;
