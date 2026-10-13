@@ -8,4 +8,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+fontdb = "0.24.0"
 rivet-foundation.workspace = true
+ttf-parser = "0.25.1"
