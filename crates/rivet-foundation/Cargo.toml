@@ -8,3 +8,6 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
