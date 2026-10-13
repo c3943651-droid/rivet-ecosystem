@@ -18,6 +18,8 @@ use crate::font::Font;
 #[derive(Debug, Default)]
 pub struct FontDb {
     db: Database,
+    /// ID de la fuente empaquetada si ya se cargó (deduplica `load_bundled`).
+    bundled: Option<crate::error::FontId>,
 }
 
 impl FontDb {
@@ -26,12 +28,38 @@ impl FontDb {
     pub fn new() -> Self {
         Self {
             db: Database::new(),
+            bundled: None,
         }
     }
 
     /// Escanea los directorios estándar del sistema (llamar una vez).
     pub fn load_system(&mut self) {
         self.db.load_system_fonts();
+    }
+
+    /// Carga la fuente de respaldo empaquetada (Inter Regular, OFL 1.1).
+    ///
+    /// Doc §3: garantiza texto legible sin fuentes de sistema. Idempotente:
+    /// la segunda llamada devuelve el mismo ID.
+    pub fn load_bundled(&mut self) -> Result<crate::error::FontId> {
+        if let Some(id) = self.bundled {
+            return Ok(id);
+        }
+        let ids = self.load_bytes(crate::bundled::BUNDLED_FONT.to_vec())?;
+        let id = ids[0];
+        self.bundled = Some(id);
+        Ok(id)
+    }
+
+    /// Selecciona la mejor cara o, si no hay ninguna, la empaquetada
+    /// (cargándola bajo demanda). Deja la cadena usable siempre.
+    pub fn select_or_bundled(
+        &mut self,
+        families: &[&str],
+        weight: Weight,
+    ) -> Result<crate::error::FontId> {
+        self.select(families, weight)
+            .map_or_else(|| self.load_bundled(), Ok)
     }
 
     /// Carga una fuente desde archivo (`.ttf`/`.otf`/`.ttc`).

@@ -1,27 +1,23 @@
-//! Tests de integración con fuentes reales del sistema (vía fontdb).
-//!
-//! Si el entorno no tiene fuentes instaladas, se saltan con aviso (la CI de
-//! GitHub instala `fonts-dejavu-core` por defecto en ubuntu-latest).
+//! Tests de integración: fuentes del sistema (DejaVu si está) y la fuente
+//! empaquetada Inter (deterministas, sin dependencia del entorno).
 
-use rivet_typography::{FontDb, GlyphAtlas, GlyphCache};
+use rivet_typography::{FontDb, GlyphAtlas, GlyphCache, BUNDLED_FONT, BUNDLED_FONT_LICENSE};
 
 /// Carga una fuente de prueba: DejaVu Sans si está (Linux típico, CI de
-/// GitHub incluida), si no la primera disponible.
-fn load_font() -> Option<(FontDb, rivet_typography::FontId)> {
+/// GitHub incluida), si no la empaquetada.
+fn load_font() -> (FontDb, rivet_typography::FontId) {
     let mut db = FontDb::new();
     db.load_system();
     let id = db
         .select(&["DejaVu Sans"], fontdb::Weight::default())
-        .or_else(|| db.sans_serif())?;
-    Some((db, id))
+        .or_else(|| db.sans_serif())
+        .unwrap_or_else(|| db.load_bundled().expect("fuente empaquetada"));
+    (db, id)
 }
 
 #[test]
 fn metricas_y_layout_basico() {
-    let Some((db, id)) = load_font() else {
-        eprintln!("skip: sin fuentes en el sistema");
-        return;
-    };
+    let (db, id) = load_font();
     let font = db.font(id, 24.0).unwrap();
     let metrics = font.metrics();
     assert!(metrics.ascent > 0.0, "ascenso positivo");
@@ -48,10 +44,7 @@ fn metricas_y_layout_basico() {
 
 #[test]
 fn rasterizado_con_antialias() {
-    let Some((db, id)) = load_font() else {
-        eprintln!("skip: sin fuentes en el sistema");
-        return;
-    };
+    let (db, id) = load_font();
     let font = db.font(id, 32.0).unwrap();
     let layout = font.layout("H");
     let glyph = font.rasterize(layout.glyphs[0]).expect("H con contorno");
@@ -75,10 +68,7 @@ fn rasterizado_con_antialias() {
 
 #[test]
 fn cache_lru_con_aciertos() {
-    let Some((db, id)) = load_font() else {
-        eprintln!("skip: sin fuentes en el sistema");
-        return;
-    };
+    let (db, id) = load_font();
     let font = db.font(id, 20.0).unwrap();
     let face = db.face(id).unwrap();
     let mut cache = GlyphCache::new(16);
@@ -97,10 +87,7 @@ fn cache_lru_con_aciertos() {
 
 #[test]
 fn atlas_empaqueta_y_convierte_a_rgba() {
-    let Some((db, id)) = load_font() else {
-        eprintln!("skip: sin fuentes en el sistema");
-        return;
-    };
+    let (db, id) = load_font();
     let font = db.font(id, 24.0).unwrap();
     let mut atlas = GlyphAtlas::new(128, 1);
     let layout = font.layout("Rivet 2026");
@@ -131,10 +118,7 @@ fn atlas_empaqueta_y_convierte_a_rgba() {
 
 #[test]
 fn cadena_de_fallback_para_caracteres() {
-    let Some((db, id)) = load_font() else {
-        eprintln!("skip: sin fuentes en el sistema");
-        return;
-    };
+    let (db, id) = load_font();
     let primary = db.face(id).unwrap();
     let mut font = rivet_typography::Font::with_fallbacks(primary, vec![], 16.0);
     // 'ñ' o '€' suelen existir; un CJK símbolo raro quizá no.
@@ -145,4 +129,42 @@ fn cadena_de_fallback_para_caracteres() {
     font.push_fallback(second);
     let layout = font.layout("aÿ€中");
     assert!(!layout.glyphs.is_empty());
+}
+
+#[test]
+fn fuente_empaquetada_inter_funciona() {
+    // Determinista: no depende del sistema (doc §3: fallback empaquetado).
+    let mut db = FontDb::new();
+    let id = db.load_bundled().unwrap();
+    // Idempotente.
+    assert_eq!(db.load_bundled().unwrap(), id);
+    assert_eq!(db.family_name(id).as_deref(), Some("Inter"));
+
+    let font = db.font(id, 24.0).unwrap();
+    let metrics = font.metrics();
+    assert!(metrics.ascent > 0.0 && metrics.descent > 0.0);
+    let layout = font.layout("Rivet");
+    assert_eq!(layout.glyphs.len(), 5);
+    assert!(layout.width > 40.0, "cinco glifos con avance");
+
+    let glyph = font.rasterize(layout.glyphs[0]).expect("R con contorno");
+    let solid = glyph.coverage.iter().filter(|&&c| c == 255).count();
+    assert!(solid > glyph.coverage.len() / 8, "trazos sólidos");
+
+    // La licencia OFL viaja con el binario (atribución).
+    assert!(BUNDLED_FONT_LICENSE.starts_with(b"Copyright (c) 2016 The Inter Project"));
+    assert!(BUNDLED_FONT.len() > 100_000);
+}
+
+#[test]
+fn select_or_bundled_sin_sistema() {
+    // Sin load_system: la selección debe caer en la empaquetada.
+    let mut db = FontDb::new();
+    let id = db
+        .select_or_bundled(
+            &["Cualquier Familia Inexistente"],
+            fontdb::Weight::default(),
+        )
+        .unwrap();
+    assert_eq!(db.family_name(id).as_deref(), Some("Inter"));
 }

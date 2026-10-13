@@ -11,6 +11,7 @@
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 mod atlas;
+pub mod bundled;
 mod cache;
 mod db;
 mod error;
@@ -22,6 +23,7 @@ mod raster;
 mod utils;
 
 pub use atlas::{AtlasPage, AtlasRect, GlyphAtlas};
+pub use bundled::{BUNDLED_FONT, BUNDLED_FONT_LICENSE};
 pub use cache::GlyphCache;
 pub use db::FontDb;
 pub use error::{FontId, Result, TypographyError};
