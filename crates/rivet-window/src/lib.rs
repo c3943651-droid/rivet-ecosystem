@@ -21,4 +21,6 @@ pub mod window;
 pub use error::{Result, WindowError};
 pub use event::{KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
 pub use shm::ShmPixels;
-pub use window::{Wayland, Window, WindowOptions};
+pub use window::{
+    KeyboardInteractivity, Layer, LayerAnchors, LayerSurfaceOptions, Wayland, Window, WindowOptions,
+};

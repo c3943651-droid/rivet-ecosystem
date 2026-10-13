@@ -128,4 +128,67 @@ pub enum WindowEvent {
         /// Tecla traducida.
         key: KeyEvent,
     },
+    /// Punto de contacto iniciado en la ventana.
+    TouchDown {
+        /// Ventana afectada.
+        window: WindowId,
+        /// ID del punto de contacto (multi-touch).
+        id: i32,
+        /// X lógica.
+        x: f64,
+        /// Y lógica.
+        y: f64,
+    },
+    /// Punto de contacto movido.
+    TouchMotion {
+        /// Ventana afectada.
+        window: WindowId,
+        /// ID del punto de contacto.
+        id: i32,
+        /// X lógica.
+        x: f64,
+        /// Y lógica.
+        y: f64,
+    },
+    /// Punto de contacto levantado.
+    TouchUp {
+        /// Ventana afectada.
+        window: WindowId,
+        /// ID del punto de contacto.
+        id: i32,
+    },
+    /// El compositor canceló los puntos de contacto (p. ej. gesture).
+    TouchCancel {
+        /// Ventana afectada.
+        window: WindowId,
+    },
+    /// Arrastre (DnD) entró en una ventana.
+    DndEnter {
+        /// Ventana afectada.
+        window: WindowId,
+        /// X lógica.
+        x: f64,
+        /// Y lógica.
+        y: f64,
+    },
+    /// Arrastre se movió dentro de la ventana.
+    DndMotion {
+        /// Ventana afectada.
+        window: WindowId,
+        /// X lógica.
+        x: f64,
+        /// Y lógica.
+        y: f64,
+    },
+    /// Arrastre salió de la ventana.
+    DndLeave {
+        /// Ventana afectada.
+        window: WindowId,
+    },
+    /// Arrastre soltado en la ventana; leer el contenido con
+    /// `Wayland::dnd_text_blocking`.
+    DndDrop {
+        /// Ventana afectada.
+        window: WindowId,
+    },
 }

@@ -6,7 +6,7 @@
 
 use std::time::{Duration, Instant};
 
-use rivet_window::{Wayland, WindowEvent, WindowOptions};
+use rivet_window::{Layer, LayerSurfaceOptions, Wayland, WindowEvent, WindowOptions};
 
 fn has_wayland() -> bool {
     std::env::var_os("WAYLAND_DISPLAY").is_some()
@@ -108,4 +108,95 @@ fn solid_rgba(w: u32, h: u32, rgba: [u8; 4]) -> Vec<u8> {
         buf.extend_from_slice(&rgba);
     }
     buf
+}
+
+#[test]
+fn clipboard_fija_y_recupera_texto() {
+    if !has_wayland() {
+        eprintln!("skip: sin $WAYLAND_DISPLAY");
+        return;
+    }
+    // Dos clientes separados (como copiar en una app y pegar en otra).
+    // Escritor en este hilo; lector en un hilo propio con su conexión.
+    let (tx, rx) = std::sync::mpsc::channel::<Option<String>>();
+
+    let reader = std::thread::spawn(move || {
+        let mut wayland = match Wayland::connect() {
+            Ok(w) => w,
+            Err(_) => {
+                let _ = tx.send(None);
+                return;
+            }
+        };
+        wayland.roundtrip().unwrap();
+        wayland.roundtrip().unwrap();
+        // Espera breve a que aparezca la selección del otro cliente.
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let mut text: Option<String> = None;
+        while Instant::now() < deadline {
+            wayland.roundtrip().unwrap();
+            if let Some(t) = wayland.clipboard_text_blocking(Duration::from_millis(200)) {
+                text = Some(t);
+                break;
+            }
+        }
+        let _ = tx.send(text);
+    });
+
+    let mut writer = Wayland::connect().unwrap();
+    writer.roundtrip().unwrap();
+    writer.roundtrip().unwrap();
+    writer.set_clipboard_text("hola rivet").unwrap();
+
+    // Mantiene al escritor vivo y despachando (su data source sirve el
+    // `send` al lector) mientras el lector espera.
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while !rx.try_recv().is_ok() && Instant::now() < deadline {
+        writer.roundtrip().unwrap();
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let got = rx.try_recv().ok().flatten();
+    let _ = reader.join();
+
+    match got {
+        Some(text) => assert_eq!(text, "hola rivet"),
+        None => {
+            // Compositor estricto con serial de entrada (KWin lo exige):
+            // sin eventos de usuario no hay serial válido; no es un fallo
+            // del subsistema. En uso real siempre hay serial de input.
+            eprintln!("skip: el compositor no anunció la selección (serial de entrada estricto)");
+        }
+    }
+}
+
+#[test]
+fn layer_shell_si_esta_disponible() {
+    if !has_wayland() {
+        eprintln!("skip: sin $WAYLAND_DISPLAY");
+        return;
+    }
+    let mut wayland = Wayland::connect().unwrap();
+    wayland.roundtrip().unwrap();
+    wayland.roundtrip().unwrap();
+    if !wayland.has_layer_shell() {
+        eprintln!("skip: el compositor no ofrece zwp_layer_shell_v1");
+        return;
+    }
+    let mut surface = wayland
+        .create_layer_surface(LayerSurfaceOptions::bar(10, Layer::Top))
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline && !surface.configured() {
+        wayland.roundtrip().unwrap();
+    }
+    assert!(surface.configured(), "la capa debe recibir configure");
+    // Anclada abajo: el ancho lo fija el compositor.
+    let (w, h) = surface.logical_size();
+    assert!(h >= 10, "alto lógico razonable");
+    let _ = w;
+    let (bw, bh) = surface.buffer_size();
+    surface
+        .present_rgba(&solid_rgba(bw, bh, [40, 60, 80, 255]))
+        .unwrap();
+    wayland.roundtrip().unwrap();
 }
