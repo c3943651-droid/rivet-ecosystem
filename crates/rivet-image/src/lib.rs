@@ -16,6 +16,7 @@ pub mod missing;
 pub mod svg;
 pub mod theme;
 pub mod transform;
+pub mod xpm;
 
 pub use cache::{CacheKey, ImageCache};
 pub use data::ImageData;
@@ -25,3 +26,4 @@ pub use icon::IconTheme;
 pub use missing::missing_icon;
 pub use svg::render as render_svg;
 pub use transform::{composite_over, crop, recolor, resize, Filter};
+pub use xpm::decode_xpm;

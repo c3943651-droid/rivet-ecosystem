@@ -19,6 +19,8 @@ pub enum Format {
     WebP,
     /// SVG vectorial (`.svg`); se rasteriza a un tamaño dado.
     Svg,
+    /// XPM (`.xpm`), formato de texto clásico de X11.
+    Xpm,
 }
 
 impl Format {
@@ -33,10 +35,17 @@ impl Format {
             Some(Format::WebP)
         } else if looks_like_svg(bytes) {
             Some(Format::Svg)
+        } else if is_xpm(bytes) {
+            Some(Format::Xpm)
         } else {
             None
         }
     }
+}
+
+fn is_xpm(bytes: &[u8]) -> bool {
+    // Los XPM reales empiezan con "/* XPM */" (dump estándar).
+    bytes.len() > 9 && bytes.starts_with(b"/* XPM */")
 }
 
 fn looks_like_svg(bytes: &[u8]) -> bool {
@@ -53,6 +62,7 @@ pub fn decode(bytes: &[u8]) -> Result<ImageData> {
         Some(Format::Svg) => Err(ImageError::UnsupportedFormat(
             "SVG requiere tamaño: usa svg::render".into(),
         )),
+        Some(Format::Xpm) => crate::xpm::decode_xpm(bytes),
         Some(_) => decode_raster(bytes),
         None => Err(ImageError::Decode("formato no reconocido".into())),
     }

@@ -191,4 +191,56 @@ pub enum WindowEvent {
         /// Ventana afectada.
         window: WindowId,
     },
+    /// Gesto de deslizamiento (swipe) sobre la ventana.
+    GestureSwipe {
+        /// Ventana bajo el puntero.
+        window: WindowId,
+        /// Dedos activos (solo en `Begin`).
+        fingers: u32,
+        /// Delta X (en `Update`).
+        dx: f64,
+        /// Delta Y (en `Update`).
+        dy: f64,
+        /// Fase del gesto.
+        phase: GesturePhase,
+    },
+    /// Gesto de pellizco (pinch/zoom) sobre la ventana.
+    GesturePinch {
+        /// Ventana bajo el puntero.
+        window: WindowId,
+        /// Dedos activos (solo en `Begin`).
+        fingers: u32,
+        /// Delta X.
+        dx: f64,
+        /// Delta Y.
+        dy: f64,
+        /// Factor de escala acumulado (solo en `Update`).
+        scale: f64,
+        /// Rotación en grados.
+        rotation: f64,
+        /// Fase del gesto.
+        phase: GesturePhase,
+    },
+    /// Gesto de mantener pulsado (hold).
+    GestureHold {
+        /// Ventana bajo el puntero.
+        window: WindowId,
+        /// Dedos activos (solo en `Begin`).
+        fingers: u32,
+        /// Fase del gesto.
+        phase: GesturePhase,
+    },
+}
+
+/// Fase de un gesto multi-touch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GesturePhase {
+    /// Comienzo del gesto.
+    Begin,
+    /// Movimiento en curso.
+    Update,
+    /// Fin normal del gesto.
+    End,
+    /// Cancelado por el compositor.
+    Cancel,
 }

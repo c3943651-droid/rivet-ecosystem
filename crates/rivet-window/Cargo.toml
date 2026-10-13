@@ -11,6 +11,6 @@ rust-version.workspace = true
 libc = "0.2.190"
 rivet-foundation.workspace = true
 wayland-client = "0.31.15"
-wayland-protocols = { version = "0.32", features = ["client", "wayland-client", "staging"] }
+wayland-protocols = { version = "0.32", features = ["client", "wayland-client", "staging", "unstable"] }
 wayland-protocols-wlr = { version = "0.3", features = ["client", "wayland-client"] }
 xkbcommon = "0.9.0"

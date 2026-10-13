@@ -3,7 +3,7 @@
 use ttf_parser::GlyphId;
 
 use crate::face::FontFace;
-use crate::kern::KernPairs;
+use crate::kern::Kerning;
 use crate::metrics::{glyph_advance_px, metrics_of, FontMetrics};
 use crate::raster::RasterizedGlyph;
 
@@ -49,7 +49,7 @@ pub struct TextLayout {
 pub struct Font {
     faces: Vec<FontFace>,
     size_px: f32,
-    kern: Vec<KernPairs>,
+    kern: Vec<Kerning>,
 }
 
 impl Font {
@@ -66,10 +66,7 @@ impl Font {
         assert!(size_px > 0.0, "Font: el tamaño debe ser > 0");
         let mut faces = vec![primary];
         faces.extend(fallbacks);
-        let kern = faces
-            .iter()
-            .map(|f| KernPairs::parse(raw_kern_table(f)))
-            .collect();
+        let kern = faces.iter().map(Kerning::new).collect();
         Self {
             faces,
             size_px,
@@ -79,7 +76,7 @@ impl Font {
 
     /// Añade una cara de fallback al final de la cadena.
     pub fn push_fallback(&mut self, face: FontFace) {
-        self.kern.push(KernPairs::parse(raw_kern_table(&face)));
+        self.kern.push(Kerning::new(&face));
         self.faces.push(face);
     }
 
@@ -134,10 +131,12 @@ impl Font {
                 glyph = self.primary().face().glyph_index(' ').unwrap_or(GlyphId(0));
                 chosen_face = 0;
             }
-            // Kerning con el glifo anterior (misma cara, formato 0).
+            // Kerning con el glifo anterior (misma cara): GPOS primero,
+            // tabla kern legada como respaldo.
             if let Some((prev_face, prev)) = previous {
                 if prev_face == chosen_face {
-                    let units = self.kern[chosen_face as usize].get(prev, glyph);
+                    let ttf_face = self.faces[chosen_face as usize].face();
+                    let units = self.kern[chosen_face as usize].get(ttf_face, prev, glyph);
                     x += units as f32 * self.px_per_unit();
                 }
             }
@@ -176,10 +175,4 @@ impl Font {
         let upem = self.primary().face().units_per_em().max(1) as f32;
         self.size_px / upem
     }
-}
-
-fn raw_kern_table(face: &FontFace) -> Option<&[u8]> {
-    face.face()
-        .raw_face()
-        .table(ttf_parser::Tag::from_bytes(b"kern"))
 }

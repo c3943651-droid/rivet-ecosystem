@@ -472,6 +472,57 @@ impl Wayland {
         })
     }
 
+    /// `true` si el compositor ofrece `zwp_pointer_gestures_v1`.
+    #[must_use]
+    pub fn has_gestures(&self) -> bool {
+        self.shared.borrow().state.gestures.is_some()
+    }
+
+    /// `true` cuando ya llegó algún serial de entrada (requisito de
+    /// `set_selection`/`start_drag` en compositores estrictos como KWin).
+    #[must_use]
+    pub fn has_input_serial(&self) -> bool {
+        self.shared.borrow().state.last_serial != 0
+    }
+
+    /// Inicia un arrastre (DnD) con texto, tomando `window` como origen.
+    ///
+    /// Requiere un serial de entrada válido ([`Wayland::has_input_serial`]);
+    /// el destinatario lee el texto con `text/plain;charset=utf-8`.
+    pub fn start_text_drag(&mut self, window: &Window, text: &str) -> Result<()> {
+        let mut inner = self.shared.borrow_mut();
+        let Inner {
+            conn, qh, state, ..
+        } = &mut *inner;
+        let manager = state
+            .data_device_manager
+            .clone()
+            .ok_or_else(|| WindowError::MissingGlobal("wl_data_device_manager".into()))?;
+        let device = state
+            .data_device
+            .clone()
+            .ok_or_else(|| WindowError::MissingGlobal("wl_data_device".into()))?;
+        let origin = state
+            .windows
+            .get(&window.id)
+            .expect("ventana viva: el handle garantiza su presencia")
+            .surface
+            .clone();
+        if state.last_serial == 0 {
+            return Err(WindowError::Connect(
+                "sin serial de entrada: requiere interacción previa del usuario".into(),
+            ));
+        }
+        let source = manager.create_data_source(qh, ());
+        source.offer(String::from("text/plain;charset=utf-8"));
+        source.offer(String::from("text/plain"));
+        device.start_drag(Some(&source), &origin, None, state.last_serial);
+        state.drag_text.push((source, text.to_string()));
+        conn.flush()
+            .map_err(|e| WindowError::Connect(e.to_string()))?;
+        Ok(())
+    }
+
     /// Fija el texto del portapapeles (selección).
     ///
     /// Sirve `text/plain;charset=utf-8` y `text/plain` a quien pida pegar.

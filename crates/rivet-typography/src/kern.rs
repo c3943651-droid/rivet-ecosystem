@@ -1,13 +1,17 @@
-//! Parseo de la tabla `kern` (formato 0) para kerning básico.
+//! Kerning horizontal: tabla `kern` (formato 0) + subset `GPOS` PairPos.
 //!
-//! `docs/rivet-typography.md` §5: v1 usa avance + `kern`; `GPOS` completo
-//! queda para v1.x/v2. ttf-parser no expone `kern`, así que se parsea a mano
-//! desde los bytes crudos de la tabla.
+//! `docs/rivet-typography.md` §5: v1 usa avance + kerning básico. Aquí hay
+//! dos fuentes:
+//! - `kern` (formato 0): parseada a mano (ttf-parser no la expone).
+//! - `GPOS` PairPos (formatos 1 y 2): la **spec** la parsea ttf-parser
+//!   (LayoutTable/PairAdjustment); la orquestación (feature `kern` →
+//!   lookups → consulta de par) es nuestra.
 
 use std::collections::HashMap;
 
 use ttf_parser::GlyphId;
 
+use crate::face::FontFace;
 use crate::utils::{read_i16, read_u16};
 
 /// Pares de kerning horizontales (formato 0) indexados por (izq, der).
@@ -63,4 +67,80 @@ impl KernPairs {
     pub(crate) fn get(&self, left: GlyphId, right: GlyphId) -> i16 {
         self.map.get(&(left.0, right.0)).copied().unwrap_or(0)
     }
+}
+
+/// Kerning de una cara: consulta `GPOS` (moderno) primero y cae a `kern`.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Kerning {
+    /// Pares de la tabla `kern` legada (si existe).
+    pairs: KernPairs,
+}
+
+impl Kerning {
+    pub(crate) fn new(face: &FontFace) -> Self {
+        Self {
+            pairs: KernPairs::parse(face.face().raw_face().table(KERN_TAG)),
+        }
+    }
+
+    /// Kerning horizontal entre dos glifos, en unidades de fuente.
+    ///
+    /// `GPOS` (feature `kern`, PairPos formatos 1/2) tiene prioridad; si
+    /// la fuente no lo declara, se consulta la tabla `kern` legada.
+    pub(crate) fn get(&self, face: &ttf_parser::Face<'_>, left: GlyphId, right: GlyphId) -> i16 {
+        if let Some(value) = gpos_kern(face, left, right) {
+            return value;
+        }
+        self.pairs.get(left, right)
+    }
+}
+
+const KERN_TAG: ttf_parser::Tag = ttf_parser::Tag::from_bytes(b"kern");
+
+/// Kerning horizontal vía `GPOS` feature `kern` (subset PairPos).
+///
+/// Devuelve `None` si la fuente no declara `kern` en GPOS (no
+/// confundible con "el par no existe", que devuelve `Some(0)`).
+pub(crate) fn gpos_kern(face: &ttf_parser::Face<'_>, left: GlyphId, right: GlyphId) -> Option<i16> {
+    let tables = face.tables();
+    let gpos = tables.gpos?;
+    let feature = gpos.features.find(KERN_TAG)?;
+    let mut total = 0i16;
+    for i in 0..feature.lookup_indices.len() {
+        let lookup_index = feature.lookup_indices.get(i)?;
+        let lookup = gpos.lookups.get(lookup_index)?;
+        for subtable_index in 0..lookup.subtables.len() {
+            let subtable = lookup
+                .subtables
+                .get::<ttf_parser::gpos::PositioningSubtable<'_>>(subtable_index)?;
+            let ttf_parser::gpos::PositioningSubtable::Pair(pair) = subtable else {
+                continue;
+            };
+            match pair {
+                ttf_parser::gpos::PairAdjustment::Format1 { coverage, sets } => {
+                    if let Some(coverage_index) = coverage.get(left) {
+                        if let Some(set) = sets.get(coverage_index) {
+                            if let Some((first, _second)) = set.get(right) {
+                                total += first.x_advance;
+                            }
+                        }
+                    }
+                }
+                ttf_parser::gpos::PairAdjustment::Format2 {
+                    coverage,
+                    classes,
+                    matrix,
+                } => {
+                    if coverage.get(left).is_some() {
+                        let class1 = classes.0.get(left);
+                        let class2 = classes.1.get(right);
+                        if let Some((first, _second)) = matrix.get((class1, class2)) {
+                            total += first.x_advance;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Some(total)
 }

@@ -200,3 +200,37 @@ fn layer_shell_si_esta_disponible() {
         .unwrap();
     wayland.roundtrip().unwrap();
 }
+
+#[test]
+fn gestos_y_start_drag() {
+    if !has_wayland() {
+        eprintln!("skip: sin $WAYLAND_DISPLAY");
+        return;
+    }
+    let mut wayland = Wayland::connect().unwrap();
+    wayland.roundtrip().unwrap();
+    wayland.roundtrip().unwrap();
+    // KWin/GNOME ofrecen zwp_pointer_gestures_v1; sin él, skip informativo.
+    if wayland.has_gestures() {
+        eprintln!("compositor con pointer_gestures (OK)");
+    } else {
+        eprintln!("aviso: el compositor no ofrece pointer_gestures");
+    }
+
+    // start_text_drag exige serial de entrada: sin interacción previa
+    // debe fallar con error claro (y no romper la conexión).
+    let window = wayland
+        .create_window(WindowOptions::new(32, 32).title("drag-test"))
+        .unwrap();
+    wayland.roundtrip().unwrap();
+    let result = wayland.start_text_drag(&window, "texto arrastrado");
+    if wayland.has_input_serial() {
+        // Con serial válido la petición se acepta; el drag vive hasta que
+        // el usuario lo suelte o el compositor lo cancele.
+        assert!(result.is_ok(), "start_drag con serial válido: {result:?}");
+    } else {
+        assert!(result.is_err(), "sin serial de entrada debe rechazarse");
+        // La conexión sigue viva.
+        wayland.roundtrip().unwrap();
+    }
+}

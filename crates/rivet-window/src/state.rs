@@ -12,12 +12,16 @@ use wayland_client::protocol::{
 use wayland_client::{
     delegate_noop, event_created_child, Connection, Dispatch, Proxy, QueueHandle, WEnum,
 };
+use wayland_protocols::wp::pointer_gestures::zv1::client::{
+    zwp_pointer_gesture_hold_v1, zwp_pointer_gesture_pinch_v1, zwp_pointer_gesture_swipe_v1,
+    zwp_pointer_gestures_v1,
+};
 use wayland_protocols::xdg::shell::client::{xdg_surface, xdg_toplevel, xdg_wm_base};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
 use xkbcommon::xkb;
 
-use crate::event::{KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
+use crate::event::{GesturePhase, KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
 use crate::shm::ShmPixels;
 
 /// Slots de buffer por ventana (doble buffering).
@@ -223,6 +227,7 @@ pub(crate) struct WaylandState {
     pub(crate) touch_proxy: Option<wl_touch::WlTouch>,
     pub(crate) output_scale: HashMap<usize, u32>,
     pub(crate) layer_shell: Option<zwlr_layer_shell_v1::ZwlrLayerShellV1>,
+    pub(crate) gestures: Option<zwp_pointer_gestures_v1::ZwpPointerGesturesV1>,
 
     // Ventanas.
     pub(crate) next_window: WindowId,
@@ -245,8 +250,10 @@ pub(crate) struct WaylandState {
     pub(crate) data_device: Option<wl_data_device::WlDataDevice>,
     /// Texto que ofrecemos como selección (vive mientras el source viva).
     pub(crate) clipboard_text: Option<String>,
-    /// Nuestro `wl_data_source` activo.
+    /// Nuestro `wl_data_source` activo (clipboard).
     pub(crate) own_source: Option<wl_data_source::WlDataSource>,
+    /// Fuentes activas de arrastre: (source, texto ofrecido).
+    pub(crate) drag_text: Vec<(wl_data_source::WlDataSource, String)>,
     /// Oferta de selección ajena con sus MIMEs.
     pub(crate) selection_offer: Option<OfferState>,
     /// Oferta recién anunciada (`data_offer`) a la espera de `selection`.
@@ -273,6 +280,7 @@ impl WaylandState {
             touch_proxy: None,
             output_scale: HashMap::new(),
             layer_shell: None,
+            gestures: None,
             next_window: 0,
             windows: HashMap::new(),
             zombies: Vec::new(),
@@ -287,6 +295,7 @@ impl WaylandState {
             data_device: None,
             clipboard_text: None,
             own_source: None,
+            drag_text: Vec::new(),
             selection_offer: None,
             pending_offer: None,
             dnd_offer: None,
@@ -351,6 +360,16 @@ impl Dispatch<wl_registry::WlRegistry, ()> for WaylandState {
                     "wl_data_device_manager" => {
                         state.data_device_manager = Some(
                             registry.bind::<wl_data_device_manager::WlDataDeviceManager, _, _>(
+                                name,
+                                3,
+                                qh,
+                                (),
+                            ),
+                        );
+                    }
+                    "zwp_pointer_gestures_v1" => {
+                        state.gestures = Some(
+                            registry.bind::<zwp_pointer_gestures_v1::ZwpPointerGesturesV1, _, _>(
                                 name,
                                 3,
                                 qh,
@@ -554,6 +573,14 @@ impl Dispatch<wl_seat::WlSeat, ()> for WaylandState {
             }
             if capabilities.contains(wl_seat::Capability::Touch) {
                 state.touch_proxy = Some(seat.get_touch(qh, ()));
+            }
+            // Gestos multi-touch: swipe/pinch/hold cuelgan del pointer.
+            if let (Some(gestures), Some(pointer)) =
+                (state.gestures.clone(), state.pointer_proxy.clone())
+            {
+                gestures.get_swipe_gesture(&pointer, qh, ());
+                gestures.get_pinch_gesture(&pointer, qh, ());
+                gestures.get_hold_gesture(&pointer, qh, ());
             }
             // El data device se crea al llegar el seat si hay manager.
             if let Some(manager) = state.data_device_manager.as_ref() {
@@ -775,6 +802,7 @@ delegate_noop!(WaylandState: ignore wl_shm::WlShm);
 delegate_noop!(WaylandState: ignore wl_shm_pool::WlShmPool);
 delegate_noop!(WaylandState: ignore wl_data_device_manager::WlDataDeviceManager);
 delegate_noop!(WaylandState: ignore zwlr_layer_shell_v1::ZwlrLayerShellV1);
+delegate_noop!(WaylandState: ignore zwp_pointer_gestures_v1::ZwpPointerGesturesV1);
 
 impl Dispatch<wl_surface::WlSurface, SurfaceUd> for WaylandState {
     fn event(
@@ -819,6 +847,11 @@ impl Drop for WaylandState {
             }
         }
         if let Some(source) = self.own_source.take() {
+            if source.is_alive() {
+                source.destroy();
+            }
+        }
+        for (source, _) in self.drag_text.drain(..) {
             if source.is_alive() {
                 source.destroy();
             }
@@ -952,17 +985,29 @@ impl Dispatch<wl_data_source::WlDataSource, ()> for WaylandState {
     ) {
         match event {
             wl_data_source::Event::Send { fd, .. } => {
-                // Sirve el texto del clipboard al fd que pide el pegador.
-                if let Some(text) = state.clipboard_text.clone() {
+                // Sirve el texto al fd que pide el receptor: primero los
+                // sources de arrastre (por proxy), luego el clipboard.
+                let text = state
+                    .drag_text
+                    .iter()
+                    .find(|(s, _)| s == source)
+                    .map(|(_, text)| text.clone())
+                    .or_else(|| state.clipboard_text.clone());
+                if let Some(text) = text {
                     write_fd_text(fd, &text);
                 }
                 // El OwnedFd cierra el descriptor al caer del scope.
             }
             wl_data_source::Event::Cancelled => {
-                // Reemplazaron nuestra selección: limpiar y destruir.
-                state.clipboard_text = None;
-                if state.own_source.as_ref().is_some_and(|s| s == source) {
-                    state.own_source = None;
+                if let Some(index) = state.drag_text.iter().position(|(s, _)| s == source) {
+                    // Arrastre cancelado: retirar y destruir.
+                    state.drag_text.remove(index);
+                } else {
+                    // Reemplazaron nuestra selección: limpiar y destruir.
+                    state.clipboard_text = None;
+                    if state.own_source.as_ref().is_some_and(|s| s == source) {
+                        state.own_source = None;
+                    }
                 }
                 source.destroy();
             }
@@ -1037,6 +1082,152 @@ fn write_fd_text(fd: std::os::unix::io::OwnedFd, text: &str) {
                 break;
             }
             off += n as usize;
+        }
+    }
+}
+
+impl Dispatch<zwp_pointer_gesture_swipe_v1::ZwpPointerGestureSwipeV1, ()> for WaylandState {
+    fn event(
+        state: &mut Self,
+        _: &zwp_pointer_gesture_swipe_v1::ZwpPointerGestureSwipeV1,
+        event: zwp_pointer_gesture_swipe_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        let Some(window) = state.pointer_window else {
+            return;
+        };
+        match event {
+            zwp_pointer_gesture_swipe_v1::Event::Begin { fingers, .. } => {
+                state.push_event(WindowEvent::GestureSwipe {
+                    window,
+                    fingers,
+                    dx: 0.0,
+                    dy: 0.0,
+                    phase: GesturePhase::Begin,
+                });
+            }
+            zwp_pointer_gesture_swipe_v1::Event::Update { dx, dy, .. } => {
+                state.push_event(WindowEvent::GestureSwipe {
+                    window,
+                    fingers: 0,
+                    dx,
+                    dy,
+                    phase: GesturePhase::Update,
+                });
+            }
+            zwp_pointer_gesture_swipe_v1::Event::End { cancelled, .. } => {
+                state.push_event(WindowEvent::GestureSwipe {
+                    window,
+                    fingers: 0,
+                    dx: 0.0,
+                    dy: 0.0,
+                    phase: if cancelled != 0 {
+                        GesturePhase::Cancel
+                    } else {
+                        GesturePhase::End
+                    },
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Dispatch<zwp_pointer_gesture_pinch_v1::ZwpPointerGesturePinchV1, ()> for WaylandState {
+    fn event(
+        state: &mut Self,
+        _: &zwp_pointer_gesture_pinch_v1::ZwpPointerGesturePinchV1,
+        event: zwp_pointer_gesture_pinch_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        let Some(window) = state.pointer_window else {
+            return;
+        };
+        match event {
+            zwp_pointer_gesture_pinch_v1::Event::Begin { fingers, .. } => {
+                state.push_event(WindowEvent::GesturePinch {
+                    window,
+                    fingers,
+                    dx: 0.0,
+                    dy: 0.0,
+                    scale: 1.0,
+                    rotation: 0.0,
+                    phase: GesturePhase::Begin,
+                });
+            }
+            zwp_pointer_gesture_pinch_v1::Event::Update {
+                dx,
+                dy,
+                scale,
+                rotation,
+                ..
+            } => {
+                state.push_event(WindowEvent::GesturePinch {
+                    window,
+                    fingers: 0,
+                    dx,
+                    dy,
+                    scale,
+                    rotation,
+                    phase: GesturePhase::Update,
+                });
+            }
+            zwp_pointer_gesture_pinch_v1::Event::End { cancelled, .. } => {
+                state.push_event(WindowEvent::GesturePinch {
+                    window,
+                    fingers: 0,
+                    dx: 0.0,
+                    dy: 0.0,
+                    scale: 1.0,
+                    rotation: 0.0,
+                    phase: if cancelled != 0 {
+                        GesturePhase::Cancel
+                    } else {
+                        GesturePhase::End
+                    },
+                });
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Dispatch<zwp_pointer_gesture_hold_v1::ZwpPointerGestureHoldV1, ()> for WaylandState {
+    fn event(
+        state: &mut Self,
+        _: &zwp_pointer_gesture_hold_v1::ZwpPointerGestureHoldV1,
+        event: zwp_pointer_gesture_hold_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        let Some(window) = state.pointer_window else {
+            return;
+        };
+        match event {
+            zwp_pointer_gesture_hold_v1::Event::Begin { fingers, .. } => {
+                state.push_event(WindowEvent::GestureHold {
+                    window,
+                    fingers,
+                    phase: GesturePhase::Begin,
+                });
+            }
+            zwp_pointer_gesture_hold_v1::Event::End { cancelled, .. } => {
+                state.push_event(WindowEvent::GestureHold {
+                    window,
+                    fingers: 0,
+                    phase: if cancelled != 0 {
+                        GesturePhase::Cancel
+                    } else {
+                        GesturePhase::End
+                    },
+                });
+            }
+            _ => {}
         }
     }
 }

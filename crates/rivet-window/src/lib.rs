@@ -19,7 +19,7 @@ pub mod state;
 pub mod window;
 
 pub use error::{Result, WindowError};
-pub use event::{KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
+pub use event::{GesturePhase, KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
 pub use shm::ShmPixels;
 pub use window::{
     KeyboardInteractivity, Layer, LayerAnchors, LayerSurfaceOptions, Wayland, Window, WindowOptions,

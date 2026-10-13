@@ -56,6 +56,8 @@ pub struct RenderQueue {
     blurs: Vec<BlurCommand>,
     clear: Option<Color>,
     vertex_count: usize,
+    /// Unión de las regiones afectadas por los comandos encolados.
+    damage: Option<Rect>,
 }
 
 impl RenderQueue {
@@ -72,6 +74,7 @@ impl RenderQueue {
 
     /// Rectángulo de color plano.
     pub fn rect(&mut self, layer: u32, rect: Rect, color: Color) {
+        self.mark_damage(rect);
         self.rect_transformed(layer, rect, color, &Transform::identity());
     }
 
@@ -107,6 +110,7 @@ impl RenderQueue {
         tint: Color,
         transform: &Transform,
     ) {
+        self.mark_damage(bounding_box(rect, transform));
         let batch = self.batch_for(layer, ShaderKind::Textured, Some(texture));
         push_quad(
             &mut batch.vertices,
@@ -125,6 +129,7 @@ impl RenderQueue {
     /// misma capa o superior se dibujan después encima.
     pub fn blur(&mut self, layer: u32, rect: Rect, radius: f32) {
         assert!(radius > 0.0, "blur: el radio debe ser > 0");
+        self.mark_damage(rect);
         self.blurs.push(BlurCommand {
             layer,
             rect,
@@ -138,6 +143,39 @@ impl RenderQueue {
         self.blurs.clear();
         self.clear = None;
         self.vertex_count = 0;
+        self.damage = None;
+    }
+
+    /// Registra una región como "sucia" (unión con el damage actual).
+    ///
+    /// El renderizador la llama por cada comando; el consumidor la usa para
+    /// decidir qué repintar (invalidación por región, doc §12 de canvas).
+    pub fn mark_damage(&mut self, region: Rect) {
+        self.damage = Some(match self.damage {
+            Some(existing) => {
+                let x = existing.x.min(region.x);
+                let y = existing.y.min(region.y);
+                Rect::new(
+                    x,
+                    y,
+                    existing.right().max(region.right()) - x,
+                    existing.bottom().max(region.bottom()) - y,
+                )
+            }
+            None => region,
+        });
+    }
+
+    /// Devuelve y consume la región sucia acumulada (bounding box v1).
+    #[must_use]
+    pub fn take_damage(&mut self) -> Option<Rect> {
+        self.damage.take()
+    }
+
+    /// Región sucia acumulada sin consumirla.
+    #[must_use]
+    pub fn damage(&self) -> Option<Rect> {
+        self.damage
     }
 
     /// Color de fondo configurado.
@@ -251,5 +289,68 @@ mod tests {
         assert!(q.batches().is_empty());
         assert!(q.blurs().is_empty());
         assert_eq!(q.background(), None);
+    }
+}
+
+/// Bounding box de un rect transformado (para el damage tracking).
+pub(crate) fn bounding_box(rect: Rect, transform: &Transform) -> Rect {
+    let corners = [
+        transform.apply(rect.x, rect.y),
+        transform.apply(rect.right(), rect.y),
+        transform.apply(rect.x, rect.bottom()),
+        transform.apply(rect.right(), rect.bottom()),
+    ];
+    let min_x = corners.iter().map(|p| p.0).fold(f32::INFINITY, f32::min);
+    let max_x = corners
+        .iter()
+        .map(|p| p.0)
+        .fold(f32::NEG_INFINITY, f32::max);
+    let min_y = corners.iter().map(|p| p.1).fold(f32::INFINITY, f32::min);
+    let max_y = corners
+        .iter()
+        .map(|p| p.1)
+        .fold(f32::NEG_INFINITY, f32::max);
+    Rect::new(min_x, min_y, max_x - min_x, (max_y - min_y).max(0.01))
+}
+
+#[cfg(test)]
+mod damage_tests {
+    use super::*;
+
+    #[test]
+    fn damage_acumula_uniones() {
+        let mut q = RenderQueue::new();
+        assert_eq!(q.damage(), None);
+        q.rect(0, Rect::new(0.0, 0.0, 10.0, 10.0), Color::WHITE);
+        assert_eq!(q.damage(), Some(Rect::new(0.0, 0.0, 10.0, 10.0)));
+        q.rect(0, Rect::new(20.0, 5.0, 10.0, 10.0), Color::WHITE);
+        assert_eq!(
+            q.damage(),
+            Some(Rect::new(0.0, 0.0, 30.0, 15.0)),
+            "unión de regiones"
+        );
+        let taken = q.take_damage();
+        assert_eq!(taken, Some(Rect::new(0.0, 0.0, 30.0, 15.0)));
+        assert_eq!(q.damage(), None, "take consume");
+    }
+
+    #[test]
+    fn damage_transformado_e_blur() {
+        let mut q = RenderQueue::new();
+        let t = Transform::translate(100.0, 100.0);
+        q.textured_rect(
+            0,
+            Rect::new(0.0, 0.0, 4.0, 4.0),
+            1,
+            Rect::new(0.0, 0.0, 1.0, 1.0),
+            Color::WHITE,
+            &t,
+        );
+        assert_eq!(q.damage(), Some(Rect::new(100.0, 100.0, 4.0, 4.0)));
+        q.blur(1, Rect::new(50.0, 50.0, 8.0, 8.0), 2.0);
+        // Unión: x∈[50,104), y∈[50,104) → 54×54.
+        assert_eq!(q.damage(), Some(Rect::new(50.0, 50.0, 54.0, 54.0)));
+        q.clear();
+        assert_eq!(q.damage(), None, "clear resetea damage");
     }
 }

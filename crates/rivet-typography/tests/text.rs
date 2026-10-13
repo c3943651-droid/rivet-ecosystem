@@ -215,3 +215,32 @@ fn subpixel_cuantizacion_y_rasterizado() {
     }
     assert_eq!(cache.len(), 2, "clave incluye el bin subpíxel");
 }
+
+#[test]
+fn gpos_kerning_estrecha_pares() {
+    // Inter declara feature `kern` en GPOS: "AV" debe quedar más estrecho
+    // que la suma de sus avances (par clásico kernneado negativo).
+    let mut db = FontDb::new();
+    let id = db.load_bundled().unwrap();
+    let font = db.font(id, 32.0).unwrap();
+
+    let a = font.layout("A").width;
+    let v = font.layout("V").width;
+    let av = font.layout("AV").width;
+    assert!(
+        av < a + v - 0.01,
+        "kerning GPOS aplicado: AV={av} vs A+V={}+{}",
+        a,
+        v
+    );
+
+    // "AA" también puede llevar kerning en Inter (extensivo), pero siempre
+    // menor que el par clásico "AV".
+    let aa = font.layout("AA").width;
+    let delta_av = (a + v) - av;
+    let delta_aa = (a + a) - aa;
+    assert!(
+        delta_av > delta_aa,
+        "AV más kernneado que AA: {delta_av} vs {delta_aa}"
+    );
+}

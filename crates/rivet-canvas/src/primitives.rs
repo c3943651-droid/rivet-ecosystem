@@ -15,6 +15,12 @@ const MIN_ARC_SEGMENTS: usize = 8;
 impl RenderQueue {
     /// Círculo relleno (aproximado por abanico de triángulos).
     pub fn circle(&mut self, layer: u32, cx: f32, cy: f32, radius: f32, color: Color) {
+        self.mark_damage(Rect::new(
+            cx - radius,
+            cy - radius,
+            radius * 2.0,
+            radius * 2.0,
+        ));
         self.ellipse(layer, cx, cy, radius, radius, color);
     }
 
@@ -29,6 +35,12 @@ impl RenderQueue {
         color: Color,
     ) {
         assert!(radius_x > 0.0 && radius_y > 0.0, "ellipse: radio > 0");
+        self.mark_damage(Rect::new(
+            cx - radius_x,
+            cy - radius_y,
+            radius_x * 2.0,
+            radius_y * 2.0,
+        ));
         // Resolución proporcional al perímetro (~8 segmentos por radio).
         let segments =
             ((2.0 * radius_x.max(radius_y)).ceil() as usize).clamp(MIN_ARC_SEGMENTS, 256);
@@ -66,6 +78,7 @@ impl RenderQueue {
     /// `radius` se limita a `min(w, h) / 2`. Con `radius` igual a ese
     /// máximo equivale a una elipse inscrita.
     pub fn rounded_rect(&mut self, layer: u32, rect: Rect, radius: f32, color: Color) {
+        self.mark_damage(rect);
         let radius = radius.clamp(0.0, rect.w.min(rect.h) * 0.5);
         if radius <= f32::EPSILON {
             self.rect(layer, rect, color);
