@@ -8,4 +8,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+libc = "0.2.190"
 rivet-foundation.workspace = true
+wayland-client = "0.31.15"
+wayland-protocols = { version = "0.32", features = ["client", "wayland-client", "staging"] }
+xkbcommon = "0.9.0"
