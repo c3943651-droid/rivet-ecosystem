@@ -13,3 +13,5 @@ rivet-canvas.workspace = true
 rivet-typography.workspace = true
 rivet-image.workspace = true
 rivet-style.workspace = true
+rivet-window.workspace = true
+khronos-egl = { version = "6.0.0", features = ["dynamic"] }

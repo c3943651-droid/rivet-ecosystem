@@ -10,7 +10,7 @@ use crate::geometry::{push_quad, Rect, Transform};
 use crate::queue::{Batch, BlurCommand, RenderQueue, ShaderKind};
 use crate::shader::ShaderManager;
 use crate::stats::{FrameStats, FrameTimer};
-use crate::texture::{TextureId, TextureManager};
+use crate::texture::{TextureId, TextureManager, TextureRegion};
 
 /// Formato de vértice: pos(2) uv(2) color(4) = 8 × f32 = 32 B.
 const STRIDE: i32 = 8 * 4;
@@ -127,6 +127,53 @@ impl GraphicsContext {
     /// Elimina una textura por ID.
     pub fn remove_texture(&mut self, id: TextureId) {
         self.textures.remove(&self.gl, id);
+    }
+
+    /// Crea un framebuffer offscreen con textura de color (`w×h`).
+    ///
+    /// Para render a target propio (lectura de píxeles, tests, wl_shm).
+    /// Fija con [`GraphicsContext::set_target`].
+    pub fn create_render_target(
+        &mut self,
+        width: u32,
+        height: u32,
+    ) -> Result<(glow::Framebuffer, TextureId)> {
+        let texture = self.textures.create(
+            &self.gl,
+            width,
+            height,
+            &vec![0u8; (width * height * 4) as usize],
+        )?;
+        let fbo = unsafe { self.gl.create_framebuffer() }
+            .map_err(|e| crate::error::CanvasError::ContextCreation(e.to_string()))?;
+        unsafe {
+            self.gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+            self.gl.framebuffer_texture_2d(
+                glow::FRAMEBUFFER,
+                glow::COLOR_ATTACHMENT0,
+                glow::TEXTURE_2D,
+                Some(self.textures.native_handle(texture).expect("textura viva")),
+                0,
+            );
+            self.gl.bind_framebuffer(glow::FRAMEBUFFER, self.target);
+        }
+        Ok((fbo, texture))
+    }
+
+    /// Destruye un render target creado con `create_render_target`.
+    pub fn destroy_render_target(&mut self, fbo: glow::Framebuffer, texture: TextureId) {
+        unsafe { self.gl.delete_framebuffer(fbo) };
+        self.remove_texture(texture);
+    }
+
+    /// Actualiza una subregión de una textura (subida incremental).
+    pub fn update_texture(
+        &mut self,
+        id: TextureId,
+        region: TextureRegion,
+        rgba: &[u8],
+    ) -> Result<()> {
+        self.textures.update_sub(&self.gl, id, region, rgba)
     }
 
     /// Referencia de solo lectura al gestor de texturas.

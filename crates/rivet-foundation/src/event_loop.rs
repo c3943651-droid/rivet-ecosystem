@@ -318,9 +318,33 @@ impl EventLoop {
     /// Ejecuta el bucle hasta que algún manejador llame a `quit`.
     pub fn run(&mut self) -> Result<()> {
         self.running = true;
+        while self.running {
+            self.run_once(None)?;
+        }
+        Ok(())
+    }
+
+    /// Una sola iteración: espera (con tope opcional) y despacha.
+    ///
+    /// El [`Application`](crate::context::Context) de ui usa esto para
+    /// integrar sus propias fases entre despertares del epoll.
+    pub fn run_once(&mut self, timeout_ms: Option<u64>) -> Result<()> {
         let mut events: Vec<libc::epoll_event> =
             vec![libc::epoll_event { events: 0, u64: 0 }; self.max_events];
-        while self.running {
+        // Timeout del parámetro o del configurado (-1 = bloquear).
+        let saved_timeout = self.timeout_ms;
+        if let Some(ms) = timeout_ms {
+            self.timeout_ms = ms.min(i32::MAX as u64) as libc::c_int;
+        }
+        let result = self.dispatch_once(&mut events);
+        self.timeout_ms = saved_timeout;
+        result?;
+        self.run_posted();
+        Ok(())
+    }
+
+    fn dispatch_once(&mut self, events: &mut Vec<libc::epoll_event>) -> Result<()> {
+        {
             // Si hay eventos posteados pendientes no bloqueamos: hay trabajo.
             let timeout = if self.posted.is_empty() {
                 self.timeout_ms
@@ -339,7 +363,7 @@ impl EventLoop {
             if n < 0 {
                 let err = io::Error::last_os_error();
                 if err.kind() == io::ErrorKind::Interrupted {
-                    continue; // EINTR: reintenta la espera.
+                    return Ok(()); // EINTR: el llamador reintenta.
                 }
                 return Err(FoundationError::event_loop(
                     EventLoopErrorKind::WaitFailed,
@@ -350,7 +374,6 @@ impl EventLoop {
                 let ev = *ev;
                 self.dispatch(ev.u64 as RawFd, ev.events);
             }
-            self.run_posted();
         }
         Ok(())
     }

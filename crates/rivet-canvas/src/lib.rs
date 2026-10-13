@@ -23,6 +23,7 @@ pub mod texture;
 pub use color::Color;
 pub use error::{CanvasError, Result};
 pub use geometry::{Rect, Transform};
+pub use glow;
 pub use queue::{Batch, BlurCommand, RenderQueue, ShaderKind};
 pub use renderer::GraphicsContext;
 pub use stats::FrameStats;

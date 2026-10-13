@@ -191,6 +191,11 @@ impl TextureManager {
         self.bound.retain(|_, &mut bound| bound != id);
     }
 
+    /// Handle GL nativo de una textura viva (uso interno del renderer).
+    pub(crate) fn native_handle(&self, id: TextureId) -> Option<glow::Texture> {
+        self.slab.get(id).map(|e| e.texture)
+    }
+
     /// Dimensiones de una textura viva.
     #[must_use]
     pub fn size(&self, id: TextureId) -> Option<(u32, u32)> {

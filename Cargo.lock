@@ -596,11 +596,13 @@ dependencies = [
 name = "rivet-ui"
 version = "0.1.0"
 dependencies = [
+ "khronos-egl",
  "rivet-canvas",
  "rivet-foundation",
  "rivet-image",
  "rivet-style",
  "rivet-typography",
+ "rivet-window",
 ]
 
 [[package]]
