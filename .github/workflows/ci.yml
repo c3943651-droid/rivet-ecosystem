@@ -8,12 +8,16 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Tests GPU headless de rivet-canvas con Mesa llvmpipe.
+  LIBGL_ALWAYS_SOFTWARE: "1"
 
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Dependencias GL (Mesa software para tests de canvas)
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
