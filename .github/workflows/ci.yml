@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Tests GPU headless de rivet-canvas con Mesa llvmpipe.
+  # Headless GPU tests for rivet-canvas via Mesa llvmpipe.
   LIBGL_ALWAYS_SOFTWARE: "1"
 
 jobs:
@@ -16,13 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Dependencias GL (Mesa software para tests de canvas)
-        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
+      - name: System dependencies (Mesa EGL/GL and libxkbcommon)
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Formato
+      - name: Format
         run: cargo fmt --all --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
