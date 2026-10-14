@@ -23,7 +23,7 @@ cargo test --workspace
 To run the example application:
 
 ```sh
-cargo run -p rivet --example hello
+cargo run -p rivet-gui --example hello
 ```
 
 ## Verification gate
@@ -44,14 +44,14 @@ with failing checks.
 
 | Crate | Responsibility |
 |---|---|
-| `rivet-foundation` | Generational slab, epoll event loop, TOML config, logging |
+| `rivet-base` | Generational slab, epoll event loop, TOML config, logging |
 | `rivet-window` | Wayland client: surfaces, input, clipboard, HiDPI |
 | `rivet-canvas` | GPU 2D renderer (OpenGL 3.3 Core + EGL) |
 | `rivet-typography` | Font parsing, rasterization, glyph cache |
 | `rivet-image` | Image decoding and icon themes |
 | `rivet-style` | Style DSL compiler |
 | `rivet-ui` | Widgets, layout, events, focus, `Application` |
-| `rivet` | Facade and prelude |
+| `rivet-gui` | Facade and prelude |
 
 Dependency direction is fixed: `window` produces surfaces and presents
 buffers; `canvas` renders into them and does not depend on `window`.
@@ -110,9 +110,9 @@ may be stated as targets, never as results.
 3. Tag the merge commit: `git tag vX.Y.Z main && git push origin vX.Y.Z`.
 4. Publish to crates.io in dependency order — each crate consumes the
    previously published versions:
-   `rivet-foundation` → `rivet-window` → `rivet-canvas` →
+   `rivet-base` → `rivet-window` → `rivet-canvas` →
    `rivet-typography` → `rivet-image` → `rivet-style` → `rivet-ui` →
-   `rivet`.
+   `rivet-gui`.
    Publishing a crate makes its source public on crates.io regardless
    of repository visibility.
 5. Create the GitHub release from the tag with `gh release create

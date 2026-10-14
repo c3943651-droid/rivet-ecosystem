@@ -1,6 +1,6 @@
 //! Rivet: the ecosystem facade.
 //!
-//! Re-exports `rivet-foundation`, `rivet-window`, `rivet-canvas`,
+//! Re-exports `rivet-base`, `rivet-window`, `rivet-canvas`,
 //! `rivet-typography`, `rivet-image`, `rivet-style` and `rivet-ui`.
 //! Equivalent to the "umbrella" of `#include <gtk/gtk.h>`.
 //!
@@ -9,7 +9,7 @@
 //! `image` decoder without pulling in the UI).
 //!
 //! ```no_run
-//! use rivet::prelude::*;
+//! use rivet_gui::prelude::*;
 //!
 //! // The UI is composed through the registry (no inheritance):
 //! let mut app = Application::new("Demo", 400, 300).unwrap();
@@ -23,15 +23,15 @@
 //! The full loop: `app.run()` — Wayland events → UI → GL render
 //! → `wl_shm` buffer presented to the compositor (v1).
 
+pub use rivet_base as foundation;
 pub use rivet_canvas as canvas;
-pub use rivet_foundation as foundation;
 pub use rivet_image as image;
 pub use rivet_style as style;
 pub use rivet_typography as typography;
 pub use rivet_ui as ui;
 pub use rivet_window as window;
 
-/// Common public API for applications: `use rivet::prelude::*;`.
+/// Common public API for applications: `use rivet_gui::prelude::*;`.
 pub mod prelude {
     // App lifecycle (ui).
     pub use rivet_ui::{Application, Ui};
@@ -53,8 +53,8 @@ pub mod prelude {
     pub use rivet_style::{compile as compile_style, StyleTable, WidgetState, EXAMPLE_DSL};
 
     // Core (advanced apps with a custom loop).
-    pub use rivet_foundation::context::{Context, ContextBuilder};
-    pub use rivet_foundation::event_loop::EventLoop;
+    pub use rivet_base::context::{Context, ContextBuilder};
+    pub use rivet_base::event_loop::EventLoop;
 
     // Images and icons.
     pub use rivet_image::{IconTheme, ImageData};

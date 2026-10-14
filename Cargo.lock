@@ -815,16 +815,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "rivet"
+name = "rivet-base"
 version = "0.1.0"
 dependencies = [
- "rivet-canvas",
- "rivet-foundation",
- "rivet-image",
- "rivet-style",
- "rivet-typography",
- "rivet-ui",
- "rivet-window",
+ "libc",
+ "serde",
+ "toml",
 ]
 
 [[package]]
@@ -834,16 +830,20 @@ dependencies = [
  "criterion",
  "glow",
  "khronos-egl",
- "rivet-foundation",
+ "rivet-base",
 ]
 
 [[package]]
-name = "rivet-foundation"
+name = "rivet-gui"
 version = "0.1.0"
 dependencies = [
- "libc",
- "serde",
- "toml",
+ "rivet-base",
+ "rivet-canvas",
+ "rivet-image",
+ "rivet-style",
+ "rivet-typography",
+ "rivet-ui",
+ "rivet-window",
 ]
 
 [[package]]
@@ -852,7 +852,7 @@ version = "0.1.0"
 dependencies = [
  "image",
  "resvg",
- "rivet-foundation",
+ "rivet-base",
 ]
 
 [[package]]
@@ -860,7 +860,7 @@ name = "rivet-style"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "rivet-foundation",
+ "rivet-base",
 ]
 
 [[package]]
@@ -869,7 +869,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "fontdb 0.24.0",
- "rivet-foundation",
+ "rivet-base",
  "ttf-parser",
 ]
 
@@ -879,8 +879,8 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "khronos-egl",
+ "rivet-base",
  "rivet-canvas",
- "rivet-foundation",
  "rivet-image",
  "rivet-style",
  "rivet-typography",
@@ -893,7 +893,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "libc",
- "rivet-foundation",
+ "rivet-base",
  "wayland-client",
  "wayland-protocols",
  "wayland-protocols-wlr",

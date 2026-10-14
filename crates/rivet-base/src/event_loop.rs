@@ -1,6 +1,6 @@
 //! Event loop on top of `epoll` (Linux).
 //!
-//! `docs/rivet-foundation.md` §4: level-triggered `epoll`, timers
+//! `docs/rivet-base.md` §4: level-triggered `epoll`, timers
 //! via `timerfd`, signals via `signalfd` (blocked with `sigprocmask`),
 //! batch dispatch on the thread running [`EventLoop::run`]. When idle the
 //! process blocks in `epoll_wait` (consumption tending to ~0; a goal to be

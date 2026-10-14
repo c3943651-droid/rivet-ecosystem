@@ -1,5 +1,5 @@
 [package]
-name = "rivet"
+name = "rivet-gui"
 description = "GUI toolkit for Linux (Wayland): window management, GPU rendering, typography, styling, and widgets."
 keywords = ["gui", "toolkit", "wayland", "linux"]
 categories = ["gui"]
@@ -10,7 +10,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-rivet-foundation.workspace = true
+rivet-base.workspace = true
 rivet-window.workspace = true
 rivet-canvas.workspace = true
 rivet-typography.workspace = true

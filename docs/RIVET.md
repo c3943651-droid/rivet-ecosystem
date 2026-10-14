@@ -46,14 +46,14 @@ Rivet is a suite of low-level libraries delivering window management, GPU render
 
 | Crate | Responsibility |
 | --- | --- |
-| `rivet-foundation` | Generational slab, epoll event loop, TOML configuration, error primitives |
+| `rivet-base` | Generational slab, epoll event loop, TOML configuration, error primitives |
 | `rivet-window` | Native Wayland client (`xdg_shell`, `layer_shell`, popups, input, `wl_shm`) |
 | `rivet-canvas` | GPU 2D rendering engine (OpenGL 3.3 Core + EGL), shaders, FBOs, batching |
 | `rivet-typography` | TTF/OTF parsing, analytical scanline rasterizer, glyph cache, metrics |
 | `rivet-image` | Multi-format image decoding (PNG, JPEG, WebP, SVG), icon themes |
 | `rivet-style` | Compile-time stylesheet DSL compiler translating rules into $O(1)$ flat tables |
 | `rivet-ui` | Retained-mode widget tree, event dispatch, focus management, layout engine |
-| `rivet` | Public facade re-exporting the ecosystem with an ergonomic prelude |
+| `rivet-gui` | Public facade re-exporting the ecosystem with an ergonomic prelude |
 
 ---
 
@@ -133,14 +133,14 @@ rivet-canvas pipeline:
 
 ## 9. Subsystem Specifications
 
-* **`rivet-foundation`:** Foundation services including generational allocators, epoll event loops, and robust error management.
+* **`rivet-base`:** Foundation services including generational allocators, epoll event loops, and robust error management.
 * **`rivet-window`:** Native Wayland client handling surface lifecycles (`xdg_shell`, `layer_shell`), input seats, and shared buffer pools.
 * **`rivet-canvas`:** Immediate/batched 2D GPU renderer targeting OpenGL 3.3 pipelines with damage tracking and offscreen FBO targets.
 * **`rivet-typography`:** TrueType/OpenType font parser coupled with an analytical scanline rasterizer and glyph texture cache.
 * **`rivet-image`:** Decoder engine for raster formats (PNG, JPEG, WebP) and vector graphics (SVG), along with icon theme parsers.
 * **`rivet-style`:** Proprietary `.rivet-style` DSL compiler transforming rules into flat lookup tables.
 * **`rivet-ui`:** Retained-mode tree orchestrating multi-pass layout, pointer hit-testing, focus rings, and application event loops.
-* **`rivet`:** Top-level ecosystem facade and user prelude.
+* **`rivet-gui`:** Top-level ecosystem facade and user prelude.
 
 ---
 

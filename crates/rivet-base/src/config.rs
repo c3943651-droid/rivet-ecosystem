@@ -1,6 +1,6 @@
 //! Typed TOML configuration with default values and hot-reload.
 //!
-//! `docs/rivet-foundation.md` §5: priority `~/.config/rivet/config.toml` +
+//! `docs/rivet-base.md` §5: priority `~/.config/rivet/config.toml` +
 //! defaults (configurable path); hot-reload via `inotify` registered in the
 //! event loop (100 ms cooldown). If parsing fails, the previous
 //! configuration is kept and a warning is issued (the watcher delivers the `Err`).

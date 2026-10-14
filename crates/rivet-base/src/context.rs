@@ -1,6 +1,6 @@
 //! Ecosystem context: integration point with explicit injection.
 //!
-//! `docs/rivet-foundation.md` §8: each crate receives `&Context`/`&mut Context`
+//! `docs/rivet-base.md` §8: each crate receives `&Context`/`&mut Context`
 //! (no singletons). It is created with [`ContextBuilder::build`]; the typical flow is
 //! build context → load config → register modules → `event_loop().run()`.
 
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn builder_crea_contexto_funcional() {
         let mut ctx = ContextBuilder::new()
-            .config_path("/no/existe/rivet-foundation-test.toml")
+            .config_path("/no/existe/rivet-base-test.toml")
             .build()
             .unwrap();
         assert_eq!(ctx.config().core.slab_initial_capacity, 1024);
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn contexto_ejecuta_el_bucle() {
         let mut ctx = ContextBuilder::new()
-            .config_path("/no/existe/rivet-foundation-test.toml")
+            .config_path("/no/existe/rivet-base-test.toml")
             .build()
             .unwrap();
         ctx.event_loop()

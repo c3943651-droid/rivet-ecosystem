@@ -5,7 +5,7 @@ Rivet's **images and icons** subsystem. **New crate** (did not exist in v1).
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Layer:** 2.5 (image support over canvas)
-- **Depends on:** `rivet-foundation`; consumed by `rivet-canvas` / `rivet-ui`.
+- **Depends on:** `rivet-base`; consumed by `rivet-canvas` / `rivet-ui`.
 - **Umbrella document:** `../RIVET.md`
 
 ---

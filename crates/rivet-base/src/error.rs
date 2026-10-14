@@ -59,7 +59,7 @@ pub enum LoggingErrorKind {
 /// Error unificado del núcleo Rivet.
 ///
 /// Los errores recuperables se devuelven como `Result`; las condiciones que
-/// indican un bug del programador provocan `panic!` (ver `docs/rivet-foundation.md` §6).
+/// indican un bug del programador provocan `panic!` (ver `docs/rivet-base.md` §6).
 #[derive(Debug)]
 pub enum FoundationError {
     /// Operación inválida sobre el slab (ID inválido o generación obsoleta).

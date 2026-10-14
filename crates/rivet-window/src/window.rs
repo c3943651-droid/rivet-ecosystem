@@ -13,7 +13,7 @@ use wayland_protocols_wlr::layer_shell::v1::client::{
     zwlr_layer_surface_v1::KeyboardInteractivity as WlrInteractivity,
 };
 
-use rivet_foundation::event_loop::{interest, EventLoop};
+use rivet_base::event_loop::{interest, EventLoop};
 
 use crate::error::{Result, WindowError};
 use crate::event::{WindowEvent, WindowId};
@@ -207,7 +207,7 @@ impl WindowOptions {
 
 /// Conexión al compositor Wayland con handshake de globals hecho.
 ///
-/// Integradla con el bucle de eventos de `rivet-foundation` vía
+/// Integradla con el bucle de eventos de `rivet-base` vía
 /// [`Wayland::register_in`]; los eventos llegan por [`Wayland::take_events`].
 pub struct Wayland {
     shared: Shared,

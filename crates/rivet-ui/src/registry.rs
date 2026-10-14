@@ -4,8 +4,8 @@
 //! kind-specific data (no *padding* from the largest widget). Children
 //! via O(1) intrusive links.
 
+use rivet_base::slab::Slab;
 use rivet_canvas::Rect;
-use rivet_foundation::slab::Slab;
 
 use crate::error::{Result, UiError};
 use crate::widget::{state, WidgetId, WidgetKind, WidgetNode};

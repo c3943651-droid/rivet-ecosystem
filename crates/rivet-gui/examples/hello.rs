@@ -2,7 +2,7 @@
 //!
 //! Run in a Wayland session: `cargo run -p rivet --example hello`.
 
-use rivet::prelude::*;
+use rivet_gui::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = Application::new("Hello, Rivet", 360, 200)?;

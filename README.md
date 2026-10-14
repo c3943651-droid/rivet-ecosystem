@@ -12,7 +12,7 @@ A GUI toolkit for Linux, written end-to-end in Rust, targeting Wayland.
 Rivet is a set of libraries for building desktop applications: windows,
 widgets, text rendering, images, styling, and the event loop that connects
 them. Each library has a single responsibility and can be used on its own;
-the `rivet` facade re-exports the whole set for application code.
+the `rivet-gui` facade re-exports the whole set for application code.
 
 The GUI layer contains no C dependencies. Where a problem is solved by a
 mature pure-Rust crate, that crate is used; functionality specific to a
@@ -38,7 +38,7 @@ dependency:
 
 ```toml
 [dependencies]
-rivet = { git = "https://github.com/c3943651-droid/rivet-ecosystem", branch = "develop" }
+rivet-gui = { git = "https://github.com/c3943651-droid/rivet-ecosystem", branch = "develop" }
 ```
 
 Individual layers can be used without the facade, for example
@@ -50,7 +50,7 @@ on their own.
 A window with a label and a button:
 
 ```rust
-use rivet::prelude::*;
+use rivet_gui::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = Application::new("Hello, Rivet", 360, 200)?;
@@ -73,8 +73,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 The same example is available in
-[`crates/rivet/examples/hello.rs`](crates/rivet/examples/hello.rs) and runs
-with `cargo run -p rivet --example hello`.
+[`crates/rivet-gui/examples/hello.rs`](crates/rivet-gui/examples/hello.rs) and runs
+with `cargo run -p rivet-gui --example hello`.
 
 ## Stability and support
 
@@ -94,14 +94,14 @@ project is young and the API should be expected to change before 1.0.
 
 | Crate | Responsibility |
 |---|---|
-| `rivet-foundation` | Generational slab, epoll event loop, TOML config, logging |
+| `rivet-base` | Generational slab, epoll event loop, TOML config, logging |
 | `rivet-window` | Wayland client: toplevel and layer-shell surfaces, input, clipboard, drag-and-drop, HiDPI |
 | `rivet-canvas` | GPU 2D renderer (OpenGL 3.3 Core + EGL): primitives, batching, textures, effects |
 | `rivet-typography` | TTF/OTF parsing, rasterization with subpixel positioning, kerning, glyph cache and atlas |
 | `rivet-image` | Image decoding (PNG/JPEG/WebP/SVG/XPM) and freedesktop icon themes |
 | `rivet-style` | Style DSL compiled to flat tables; themes and widget states |
 | `rivet-ui` | Widgets, layout, hit-testing, focus, and `Application` |
-| `rivet` | Facade with prelude |
+| `rivet-gui` | Facade with prelude |
 
 Dependency direction: `window` produces surfaces and presents buffers;
 `canvas` renders into them. `canvas` does not depend on `window`.
@@ -113,7 +113,7 @@ Dependency direction: `window` produces surfaces and presents buffers;
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — build/test workflow, verification
   gate, semver policy, and release process.
 - `docs/<crate>.md` — per-crate documentation.
-- Rust API docs: `cargo doc --open -p rivet`.
+- Rust API docs: `cargo doc --open -p rivet-gui`.
 
 ## License
 

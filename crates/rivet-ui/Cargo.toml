@@ -10,7 +10,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-rivet-foundation.workspace = true
+rivet-base.workspace = true
 rivet-canvas.workspace = true
 rivet-typography.workspace = true
 rivet-image.workspace = true
