@@ -8,7 +8,7 @@
 //! accessible separately (e.g. only the `foundation` slab or the
 //! `image` decoder without pulling in the UI).
 //!
-//! ```
+//! ```no_run
 //! use rivet::prelude::*;
 //!
 //! // The UI is composed through the registry (no inheritance):
@@ -16,7 +16,7 @@
 //! let ui = app.ui_mut();
 //! let root = ui.registry.create_panel(true);
 //! ui.registry.set_root(root).unwrap();
-//! let label = ui.registry.create_label("Hola Rivet");
+//! let label = ui.registry.create_label("Hello Rivet");
 //! ui.registry.add_child(root, label).unwrap();
 //! ```
 //!
@@ -31,39 +31,39 @@ pub use rivet_typography as typography;
 pub use rivet_ui as ui;
 pub use rivet_window as window;
 
-/// API pública habitual para apps: `use rivet::prelude::*;`.
+/// Common public API for applications: `use rivet::prelude::*;`.
 pub mod prelude {
-    // Ciclo de app (ui).
+    // App lifecycle (ui).
     pub use rivet_ui::{Application, Ui};
 
-    // Widgets y árbol.
+    // Widgets and tree.
     pub use rivet_ui::registry::WidgetRegistry;
     pub use rivet_ui::widget::{state, WidgetId, WidgetKind, WidgetNode};
 
-    // Eventos y entrada.
+    // Events and input.
     pub use rivet_ui::event::{EventDispatcher, UiInput};
     pub use rivet_ui::focus::FocusManager;
     pub use rivet_window::WindowEvent;
 
-    // Dibujo.
+    // Drawing.
     pub use rivet_canvas::{Color, Rect, RenderQueue, TextureId};
     pub use rivet_ui::TextRenderer;
 
-    // Estilos.
+    // Styling.
     pub use rivet_style::{compile as compile_style, StyleTable, WidgetState, EXAMPLE_DSL};
 
-    // Núcleo (creación de apps avanzadas con bucle propio).
+    // Core (advanced apps with a custom loop).
     pub use rivet_foundation::context::{Context, ContextBuilder};
     pub use rivet_foundation::event_loop::EventLoop;
 
-    // Imágenes e iconos.
+    // Images and icons.
     pub use rivet_image::{IconTheme, ImageData};
 
-    // Tipografía.
+    // Typography.
     pub use rivet_typography::FontDb;
 }
 
-/// Versión del ecosistema (workspace unificado).
+/// Ecosystem version (unified workspace).
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]

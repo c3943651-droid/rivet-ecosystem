@@ -32,12 +32,33 @@ pub use rivet_style as style;
 pub use rivet_ui as ui;
 
 pub mod prelude {
-    pub use rivet_ui::Application;
-    pub use rivet_ui::{Button, Label, TextInput, /* ... */};
-    pub use rivet_canvas::{Color, Rect};
-    pub use rivet_foundation::Context;
+    // App lifecycle.
+    pub use rivet_ui::{Application, Ui};
+    // Widget tree and registry.
+    pub use rivet_ui::registry::WidgetRegistry;
+    pub use rivet_ui::widget::{state, WidgetId, WidgetKind, WidgetNode};
+    // Events and input.
+    pub use rivet_ui::event::{EventDispatcher, UiInput};
+    pub use rivet_ui::focus::FocusManager;
+    pub use rivet_window::WindowEvent;
+    // Drawing.
+    pub use rivet_canvas::{Color, Rect, RenderQueue, TextureId};
+    pub use rivet_ui::TextRenderer;
+    // Styling.
+    pub use rivet_style::{compile as compile_style, StyleTable, WidgetState, EXAMPLE_DSL};
+    // Core (custom loops).
+    pub use rivet_foundation::context::{Context, ContextBuilder};
+    pub use rivet_foundation::event_loop::EventLoop;
+    // Images and icons.
+    pub use rivet_image::{IconTheme, ImageData};
+    // Typography.
+    pub use rivet_typography::FontDb;
 }
 ```
+
+The widgets themselves (panels, labels, buttons) are created through the
+registry on a [`Ui`] instance; they are not exported as constructor types
+in the prelude.
 
 ## 3. Usage
 
@@ -45,15 +66,23 @@ pub mod prelude {
 use rivet::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Application::new()
-        .window("Mi App", 800, 600)
-        .ui(|ui| {
-            ui.add(Label::new("Hola, Rivet"));
-            if ui.button("Salir").clicked() { /* ... */ }
-        })
-        .run()
+    let mut app = Application::new("Hello, Rivet", 360, 200)?;
+    {
+        let ui = app.ui_mut();
+        let root = ui.registry.create_panel(true);
+        ui.registry.set_root(root)?;
+        let title = ui.registry.create_label("Hello, Rivet");
+        let close = ui.registry.create_button("Quit", |ui| ui.quit());
+        ui.registry.add_child(root, title)?;
+        ui.registry.add_child(root, close)?;
+    }
+    app.run()?;
+    Ok(())
 }
 ```
+
+The complete, runnable version is `crates/rivet/examples/hello.rs`
+(`cargo run -p rivet --example hello`).
 
 ## 4. Facade or separate crates?
 
@@ -77,4 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## 8. Metrics
 
-The facade cost must be **~0** (re-exports only; no added runtime). It is verified that it introduces no initialization code of its own.
+The facade cost must be **~0**: it is re-exports only, with no
+initialization code of its own. No runtime measurement is published for
+this crate; the requirement is structural (the code adds no executable
+code beyond `pub use` and the `VERSION` constant).
