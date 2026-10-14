@@ -1,6 +1,8 @@
 [package]
 name = "rivet-foundation"
-description = "Núcleo del ecosistema Rivet: slab con generaciones, bucle de eventos (epoll), config TOML, errores y utilidades."
+description = "Rivet core: generational slab, epoll event loop, TOML config, and utilities."
+keywords = ["slab", "event-loop", "epoll", "arena"]
+categories = ["os::linux-apis"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true

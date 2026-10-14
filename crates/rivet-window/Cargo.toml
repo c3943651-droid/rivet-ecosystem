@@ -1,6 +1,8 @@
 [package]
 name = "rivet-window"
-description = "Cliente Wayland nativo de Rivet: socket, wl_registry, xdg_shell, layer_shell, entrada y buffers (wl_shm, DMA-BUF)."
+description = "Native Wayland client for Rivet: xdg_shell, layer_shell, input, and buffer management."
+keywords = ["wayland", "client", "xdg-shell", "layer-shell"]
+categories = ["os::linux-apis", "gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true

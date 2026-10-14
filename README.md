@@ -110,6 +110,8 @@ Dependency direction: `window` produces surfaces and presents buffers;
 
 - [`docs/RIVET.md`](docs/RIVET.md) — architecture, closed design decisions
   (ADR-01..08), dependency policy, and the measurement registry.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — build/test workflow, verification
+  gate, semver policy, and release process.
 - `docs/<crate>.md` — per-crate documentation.
 - Rust API docs: `cargo doc --open -p rivet`.
 

@@ -1,6 +1,8 @@
 [package]
 name = "rivet-typography"
-description = "Tipografía de Rivet: parseo TTF/OTF, rasterizado (De Casteljau + scanline), caché de glifos y métricas."
+description = "Typography for Rivet: TTF/OTF parsing, rasterization with subpixel positioning, glyph cache."
+keywords = ["font", "rasterizer", "glyphs", "ttf"]
+categories = ["text-processing"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true

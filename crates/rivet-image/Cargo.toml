@@ -1,6 +1,8 @@
 [package]
 name = "rivet-image"
-description = "Carga y decodificación de imágenes de Rivet (PNG/JPEG/SVG/WebP), iconos y temas de iconos."
+description = "Image decoding for Rivet: PNG/JPEG/WebP/SVG, XPM, and freedesktop icon themes."
+keywords = ["image", "decoding", "icons", "png"]
+categories = ["multimedia::images"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
