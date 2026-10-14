@@ -1,6 +1,8 @@
 [package]
 name = "rivet-canvas"
-description = "Render 2D por GPU de Rivet (OpenGL 3.3 Core + EGL): shaders, geometría, texturas y efectos."
+description = "GPU 2D renderer for Rivet (OpenGL 3.3 Core + EGL): primitives, batching, textures, effects."
+keywords = ["opengl", "renderer", "gpu", "2d"]
+categories = ["rendering::engine", "graphics"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,4 +10,13 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+glow = "0.18.0"
 rivet-foundation.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+khronos-egl = { version = "6.0.0", features = ["dynamic"] }
+
+[[bench]]
+name = "gl"
+harness = false

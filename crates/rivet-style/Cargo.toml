@@ -1,6 +1,8 @@
 [package]
 name = "rivet-style"
-description = "Estilos precompilados de Rivet: pipeline de compilación, tablas planas indexadas por enteros, estados, paletas y temas."
+description = "Precompiled styling for Rivet: a DSL compiler producing flat O(1) lookup tables."
+keywords = ["styling", "theme", "dsl"]
+categories = ["gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,3 +11,10 @@ rust-version.workspace = true
 
 [dependencies]
 rivet-foundation.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "style"
+harness = false

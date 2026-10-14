@@ -6,7 +6,10 @@ description: Control de versiones del workspace Rivet (rivet-ecosystem). Usar cu
 # Control de versiones — Rivet
 
 - **Repo:** `github.com/c3943651-droid/rivet-ecosystem` (local: `/home/carlos/Proyectos/Rust/rivet-ecosystem`)
-- **Rama base:** `main`. Todo cambio no trivial entra por PR.
+- **Modelo de ramas:**
+  - `develop` = rama de **integración**: todas las ramas de trabajo se fusionan aquí por PR. Es la rama por defecto.
+  - `main` = **solo producto final**: bloqueada (ruleset) para recibir cambios únicamente por PR desde `develop`, con CI verde. Sin pushes directos.
+  - Ramas de trabajo: `<tipo>/<crate>-<descripcion>`, se crean desde `develop` y su PR apunta a `develop`.
 - **Documentación autoritativa:** `docs/RIVET.md` (no consultarse carpetas históricas).
 
 ## Qué se versiona
@@ -49,16 +52,20 @@ Reglas:
 ## Flujo estándar
 
 ```bash
-git switch -c feat/<rama>
+git switch -c feat/<rama> develop
 # ... cambios ...
 cargo check --workspace && git add -A && git commit -m "feat(<crate>): ..."
 git push -u origin feat/<rama>
-gh pr create --fill
-# tras aprobación y CI verde:
+gh pr create --fill --base develop
+# tras CI verde:
 gh pr merge --squash --delete-branch
+
+# Producto final: PR de develop -> main (main está protegida; solo por PR):
+gh pr create --base main --head develop --title "Release vX.Y.Z" --fill
 ```
 
-- **Merge con squash** para mantener `main` lineal.
+- **Merge con squash** para mantener `develop` lineal.
+- **develop → main** solo cuando haya un producto final (milestone completo o release).
 - Si el PR toca decisiones cerradas de `docs/RIVET.md` (ADRs), citar la sección y abrir nueva entrada ADR si aplica.
 
 ## Deshacer

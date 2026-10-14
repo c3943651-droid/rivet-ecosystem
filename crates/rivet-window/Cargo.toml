@@ -1,6 +1,8 @@
 [package]
 name = "rivet-window"
-description = "Cliente Wayland nativo de Rivet: socket, wl_registry, xdg_shell, layer_shell, entrada y buffers (wl_shm, DMA-BUF)."
+description = "Native Wayland client for Rivet: xdg_shell, layer_shell, input, and buffer management."
+keywords = ["wayland", "client", "xdg-shell", "layer-shell"]
+categories = ["os::linux-apis", "gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,4 +10,16 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+libc = "0.2.190"
 rivet-foundation.workspace = true
+wayland-client = "0.31.15"
+wayland-protocols = { version = "0.32", features = ["client", "wayland-client", "staging", "unstable"] }
+wayland-protocols-wlr = { version = "0.3", features = ["client", "wayland-client"] }
+xkbcommon = "0.9.0"
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "memfd"
+harness = false

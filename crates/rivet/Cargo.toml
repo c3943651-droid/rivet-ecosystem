@@ -1,6 +1,8 @@
 [package]
 name = "rivet"
-description = "Fachada del ecosistema Rivet: re-exporta las librerías del toolkit GUI."
+description = "GUI toolkit for Linux (Wayland): window management, GPU rendering, typography, styling, and widgets."
+keywords = ["gui", "toolkit", "wayland", "linux"]
+categories = ["gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true

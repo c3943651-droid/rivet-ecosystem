@@ -1,6 +1,8 @@
 [package]
 name = "rivet-ui"
-description = "Widgets por composición de Rivet: layout, eventos y foco sobre nodo común + slabs por tipo."
+description = "Widget layer for Rivet: composition-based widgets, layout, events, focus, and Application."
+keywords = ["gui", "widgets", "toolkit"]
+categories = ["gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,3 +15,12 @@ rivet-canvas.workspace = true
 rivet-typography.workspace = true
 rivet-image.workspace = true
 rivet-style.workspace = true
+rivet-window.workspace = true
+khronos-egl = { version = "6.0.0", features = ["dynamic"] }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "ui"
+harness = false

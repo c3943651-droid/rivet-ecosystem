@@ -2,23 +2,27 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
+  # Headless GPU tests for rivet-canvas via Mesa llvmpipe.
+  LIBGL_ALWAYS_SOFTWARE: "1"
 
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: System dependencies (Mesa EGL/GL and libxkbcommon)
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Formato
+      - name: Format
         run: cargo fmt --all --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
