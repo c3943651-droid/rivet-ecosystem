@@ -17,6 +17,7 @@ rivet-typography = { path = "crates/rivet-typography", version = "0.1.0" }
 rivet-image = { path = "crates/rivet-image", version = "0.1.0" }
 rivet-style = { path = "crates/rivet-style", version = "0.1.0" }
 rivet-ui = { path = "crates/rivet-ui", version = "0.1.0" }
+criterion = "0.5"
 
 [profile.release]
 lto = "thin"

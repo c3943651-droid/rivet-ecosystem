@@ -27,6 +27,7 @@ pub use bundled::{BUNDLED_FONT, BUNDLED_FONT_LICENSE};
 pub use cache::GlyphCache;
 pub use db::FontDb;
 pub use error::{FontId, Result, TypographyError};
+pub use face::FontFace;
 pub use font::{Font, PlacedGlyph, TextLayout};
 pub use metrics::FontMetrics;
 pub use raster::RasterizedGlyph;

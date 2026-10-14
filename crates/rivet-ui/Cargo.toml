@@ -15,3 +15,10 @@ rivet-image.workspace = true
 rivet-style.workspace = true
 rivet-window.workspace = true
 khronos-egl = { version = "6.0.0", features = ["dynamic"] }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "ui"
+harness = false

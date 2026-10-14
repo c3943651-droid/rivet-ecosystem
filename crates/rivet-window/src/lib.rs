@@ -7,8 +7,9 @@
 //! **No** renderiza: entrega superficie/buffer a `rivet-canvas` (canvas no
 //! depende de window — frontera fija del ecosistema).
 //!
-//! v1: toplevel + wl_shm + teclado/puntero/touch básico + HiDPI entero.
-//! Horizonte v1.x: DMA-BUF, layer-shell, clipboard/DnD, gestos.
+//! v1: toplevel + layer-shell + wl_shm + teclado/puntero/touch/gestos +
+//! clipboard/DnD de texto + HiDPI entero.
+//! Horizonte v1.x: DMA-BUF, decoraciones del lado del cliente.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

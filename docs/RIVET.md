@@ -307,7 +307,7 @@ Fecha/Commit: <referencia>
 Una cifra sin **método + baseline + fecha** no se publica. Los objetivos pueden citarse **como objetivos**, nunca como resultados.
 
 ### 14.2. Protocolo de medición (obligatorio)
-**Estado actual: nada medido todavía** (no hay renderer ejecutable). Todo lo siguiente son **objetivos**:
+**Estado: primera medición realizada** — 2026-10-13, `develop`, benches criterion en cada crate (`cargo bench --workspace`); resultados en §14.3. La tabla siguiente son **objetivos**:
 
 | Área | Qué medir | Método | Baseline | Criterio |
 |---|---|---|---|---|
@@ -324,6 +324,127 @@ Una cifra sin **método + baseline + fecha** no se publica. Los objetivos pueden
 | typography | raster por glifo (16/32/64px) | `criterion` | FreeType | documentar |
 
 Herramientas: `criterion`, `hyperfine`, `perf`, `smem`/`/proc/<pid>/status`, frame timer propio.
+
+### 14.3. Registro de mediciones — v0.1.0 (2026-10-13)
+
+Máquina: Intel Core i7-8665U (4C/8T) · Mesa Intel UHD Graphics 620 (WHL
+GT2) · Linux/Wayland (KWin) · benches en perfil `bench` (release, LTO
+thin). Baselines Cairo/FreeType/GLX: **no ejecutados** (el ecosistema no
+depende de ellos; comparación pendiente si se añade un harness dedicado).
+
+**canvas — init EGL + contexto 3.3** (objetivo < 50 ms ✓)
+```
+Métrica:      eglGetDisplay+Initialize+ChooseConfig+CreateContext+MakeCurrent
+Método:       criterion `canvas/egl init + contexto 3.3`, iter_custom, FBO headless
+Baseline:     GLX (pendiente)
+Resultado:    37.7–39.9 ms (mediana 38.8 ms) — REAL (UHD 620)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**canvas — compilación de shaders** (objetivo < 30 ms ✓, margen 30×)
+```
+Métrica:      GraphicsContext::from_loader (loader + 2 programas enlazados)
+Método:       criterion `canvas/compilación de shaders`, contexto persistente
+Baseline:     —
+Resultado:    1.00–1.02 ms (mediana 1.01 ms)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**canvas — frame time con N rects, 1080p** (criterio: documentar)
+```
+Métrica:      render GL al FBO + glReadPixels 1920x1080 (ruta wl_shm v1, sin VSync)
+Método:       criterion `canvas/frame {N} rects`, batch plano, colores rotados
+Baseline:     Cairo (pendiente)
+Resultado:    1k: 8.88 ms (~112 fps) · 10k: 11.95 ms (~84 fps) · 100k: 28.38 ms (~35 fps)
+              Margen 1k→100k: +19.5 ms por 99k rects ≈ 200 ns/rect marginal.
+              El readback domina el costo fijo (~8 ms) → gatillo DMA-BUF (ADR-02).
+Fecha/Commit: 2026-10-13, develop
+```
+
+**canvas/typography — VRAM por glifo 32 px** (criterio: en KB)
+```
+Métrica:      VRAM por glifo de 32 px en el atlas (página 512² RGBA, padding 1)
+Método:       estimación por página llena: 415 glifos/página (método §14
+              glGetTexLevelParameteriv sustituido por estimación: sin
+              query de memoria real en llvmpipe/iGPU)
+Baseline:     —
+Resultado:    ~5.0 KB/glifo (página de 1 MiB / 415 glifos)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**window — memfd_create** (objetivo < 0.1 ms ✓, margen 55×)
+```
+Métrica:      memfd_create + close
+Método:       criterion `window/memfd_create+close` (1000+ reps)
+Baseline:     shm_open + shm_unlink (POSIX) — MEDIDO: 5.14 µs/op
+Resultado:    1.79 µs/op → memfd 2.9× más rápido que el baseline
+Fecha/Commit: 2026-10-13, develop
+```
+
+**window — pool de buffers 1080p** (criterio: documentar)
+```
+Métrica:      ShmPixels::new(1920, 1080, 3 slots) — memfd + ftruncate + mmap + unmap
+Método:       criterion `window/pool ShmPixels 1080p x3`
+Baseline:     —
+Resultado:    5.43 µs (páginas lazy: sin tocar físicamente los 24 MiB)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**style — cambio de StyleId** (objetivo O(1) ✓)
+```
+Métrica:      StyleTable::get(kind, estado) con rotación de (tipo, estado)
+Método:       criterion `style/lookup (kind,estado)`; 1M ops ≈ 3.3 ms
+Baseline:     CSS en caliente (pendiente)
+Resultado:    3.33 ns/op (~300M ops/s) — indexación plana constante,
+              independiente del contenido de la tabla
+Fecha/Commit: 2026-10-13, develop
+```
+
+**style — memoria de tablas** (objetivo < 10 KB ✓)
+```
+Métrica:      size_of StyleTable compilada de EXAMPLE_DSL (10 tipos × 5 filas + paleta)
+Método:       size_of_val (contador estático)
+Baseline:     —
+Resultado:    48 bytes
+Fecha/Commit: 2026-10-13, develop
+```
+
+**ui — tamaño del nodo** (criterio: documentar)
+```
+Métrica:      size_of::<WidgetNode>() (nodo común ADR-03; la cifra "24 bytes"
+              de la doc antigua queda sustituida por la medida)
+Método:       size_of (contador estático)
+Baseline:     —
+Resultado:    104 bytes (5×Option<WidgetId> + kind + estado + Rect + dirty,
+              con padding)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**ui — hit-test, layout y recorrido** (criterio: documentar)
+```
+Métrica:      hit-test de 1 punto, layout completo (2 pasadas), recorrido del árbol
+Método:       criterion sobre árbol de 1050 widgets (50 cajas × 20 botones + raíz),
+              viewport 1280×720
+Baseline:     —
+Resultado:    hit-test: 5.76 µs/punto · layout: 5.48 ms/frame completo
+              (≈5.2 µs/widget, dominado por medición de texto) ·
+              recorrido: 5.91 µs (1050 nodos)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**typography — raster por glifo** (criterio: documentar; baseline FreeType pendiente)
+```
+Métrica:      rasterizado analítico del glifo 'R' (Inter Regular), subpíxel ¼px
+Método:       criterion `typography/raster glifo {N}px`
+Baseline:     FreeType (pendiente)
+Resultado:    16px: 145.7 µs · 32px: 189.7 µs · 64px: 274.5 µs
+              (por glifo; ~1000 glifos/s a 32px ≈ 190 ms de atlas lleno)
+Fecha/Commit: 2026-10-13, develop
+```
+
+**Pendientes de medir:** copia `wl_shm` 1080p como desglose independiente
+(el readback del frame end-to-end está medido arriba), RSS en reposo de la
+app de ejemplo, comparativas contra Cairo/FreeType/GLX.
 
 ---
 
