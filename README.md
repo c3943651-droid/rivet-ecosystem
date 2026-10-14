@@ -18,11 +18,11 @@ The GUI layer contains no C dependencies. Where a problem is solved by a
 mature pure-Rust crate, that crate is used; functionality specific to a
 toolkit (widget storage, layout, rasterization, styling, the Wayland client)
 is implemented in this repository. The full dependency policy is documented
-in [`docs/RIVET.md` §6](docs/RIVET.md).
+in [`docs/RIVET.md` §4](docs/RIVET.md).
 
 Performance figures are only published alongside measurement data; the
 measurement protocol and the current results are in
-[`docs/RIVET.md` §14](docs/RIVET.md).
+[`docs/RIVET.md` §12](docs/RIVET.md).
 
 ## Requirements
 

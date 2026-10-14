@@ -6,14 +6,13 @@ Rivet's **images and icons** subsystem. **New crate** (did not exist in v1).
 - **Date:** 2026-10-11
 - **Layer:** 2.5 (image support over canvas)
 - **Depends on:** `rivet-foundation`; consumed by `rivet-canvas` / `rivet-ui`.
-- **Replaces:** GdkPixbuf + parts of `librsvg` + GTK icon theme handling.
 - **Umbrella document:** `../RIVET.md`
 
 ---
 
 ## 1. Purpose and justification
 
-The seed applications (panel, rofi-style launcher, AnimaEngine) need to **display images**: application icons, thumbnails, sprites, avatars, and scalable SVG. GTK obtains this from GdkPixbuf + `librsvg` + the icon theme. Rivet needs an equivalent. For this reason `rivet-image` is created: it decodes formats, resolves **icons by theme**, and delivers data ready for texture upload.
+Applications need to **display images**: application icons, thumbnails, sprites, avatars, and scalable SVG. `rivet-image` provides this capability natively: it decodes formats, resolves **icons by theme**, and delivers data ready for texture upload.
 
 ## 2. Components
 
@@ -35,7 +34,7 @@ The seed applications (panel, rofi-style launcher, AnimaEngine) need to **displa
 - **SVG:** `resvg`/`usvg` (**pure Rust**) for rasterization to a bitmap; `librsvg` (C) is not used.
 - **Output:** premultiplied RGBA8, ready for a canvas texture.
 
-## 4. Icons and themes (equivalent to GdkPixbuf/icon theme)
+## 4. Icons and themes
 
 - Resolve icons by **name** following the **`freedesktop` Icon Theme** specification:
   - Search in `$XDG_DATA_DIRS/icons`, `~/.local/share/icons`, `~/.icons`, `/usr/share/icons`.
@@ -69,7 +68,7 @@ impl IconTheme {
 
 - **Pure Rust:** `png`, `jpeg-decoder`/`image`, `resvg`/`usvg`, color utilities.
 - **System C:** none.
-- No GTK, no GdkPixbuf, no `librsvg`.
+- No GUI C libraries; no `librsvg`.
 
 ## 8. Scope
 
@@ -83,6 +82,6 @@ impl IconTheme {
 - All **pure Rust**; no `librsvg`/`gdk-pixbuf`.
 - **Premultiplied RGBA** output, consistent with canvas.
 
-## 10. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 10. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 PNG/JPEG/WebP decode ms, SVG rasterization ms per size, cache hit ratio and RAM, icon lookup latency. Method: `criterion`.

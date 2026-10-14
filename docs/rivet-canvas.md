@@ -7,7 +7,6 @@ Rivet's **GPU-accelerated 2D graphics rendering** subsystem.
 - **Layer:** 3 (rendering)
 - **Depends on:** `rivet-foundation` (and `rivet-typography`, `rivet-image` as texture sources). **Does NOT depend on `rivet-window`.**
 - **Consumed by:** `rivet-ui`
-- **Replaces:** part of GTK/Cairo/Skia (the drawing layer).
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -71,13 +70,13 @@ Flow: `begin_frame` → emit commands (rects, text, textures) → `render` → `
 
 ## 8. Telemetry
 
-`FrameStats`: CPU time per phase, GPU time (if `EXT_disjoint_timer_query` is available), *draw call* counters, textures uploaded, glyphs rasterized. Basis of the **measurement protocol** (`../RIVET.md` §14).
+`FrameStats`: CPU time per phase, GPU time (if `EXT_disjoint_timer_query` is available), *draw call* counters, textures uploaded, glyphs rasterized. Basis of the **measurement protocol** (`../RIVET.md` §12).
 
 ## 9. Dependencies
 
 - **Rust:** GL/EGL bindings and math (`glam`/similar).
 - **System C (allowlist):** GL/EGL drivers (`libEGL`, `libGL`).
-- **No GTK/Qt.**
+- No GUI C libraries.
 
 ## 10. Scope
 
@@ -97,6 +96,6 @@ Flow: `begin_frame` → emit commands (rects, text, textures) → `render` → `
 - The "0% CPU during render" claim is removed: rendering **costs** CPU/GPU and is measured (ADR-08).
 - **canvas does not depend on window.**
 
-## 12. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 12. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 Sustained FPS at rest/under animation, CPU ms per frame, GPU ms per frame, draw calls, VRAM peak, texture upload time, blur cost. Method: `FrameStats` + `perf` + GPU queries.

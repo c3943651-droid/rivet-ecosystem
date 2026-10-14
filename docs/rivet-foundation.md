@@ -5,7 +5,6 @@
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Role:** core of the ecosystem. **Lowest layer**, no internal dependencies.
-- **Replaces:** GLib + part of GObject.
 
 ---
 
@@ -44,7 +43,7 @@ struct Entry<T> {
 }
 ```
 
-**64-bit ID** (ADR in `../RIVET.md` §7): bits `0..31` = index, `32..63` = generation. `id = (gen << 32) | index`.
+**64-bit ID** (ADR in `../RIVET.md` §5): bits `0..31` = index, `32..63` = generation. `id = (gen << 32) | index`.
 
 **Operations:** `insert(value) -> Id`, `get(id)`, `get_mut(id)`, `remove(id) -> Option<T>`, iteration over occupied slots, `clear()`. All O(1) except iteration (O(n)).
 
@@ -63,12 +62,12 @@ struct Entry<T> {
 - **Dispatch** in batches (`max_events_per_iteration`, default 64), on the same thread.
 - **API:** `register_fd`, `unregister_fd`, `add_timer`, `run`, `quit`, `post_event`.
 
-**Idle behavior:** with `epoll_wait(..., -1)` the process stays **asleep** until an event arrives; idle CPU usage tends toward ~0. This is a **target to be measured**, not a published promise ("measured, not promised" policy, `../RIVET.md` §14).
+**Idle behavior:** with `epoll_wait(..., -1)` the process stays **asleep** until an event arrives; idle CPU usage tends toward ~0. This is a **target to be measured**, not a published promise ("measured, not promised" policy, `../RIVET.md` §12).
 
 ## 5. Configuration
 
 - **TOML** format, typed structure with default values.
-- **Decision:** **`serde` + `toml`** are used (both pure Rust; allowed by the dependency policy of `../RIVET.md` §6). The previous version required a hand-written parser; this is simplified.
+- **Decision:** **`serde` + `toml`** are used (both pure Rust; allowed by the dependency policy of `../RIVET.md` §4). The previous version required a hand-written parser; this is simplified.
 - Priority: `~/.config/rivet/config.toml` + defaults (path configurable in the builder).
 - **Hot-reload** via `inotify` registered in `epoll` (suggested cooldown 100 ms); if parsing fails, the previous configuration is kept and a warning is logged.
 
@@ -130,11 +129,11 @@ pub struct Context {
 
 ## 11. Decisions and applied corrections
 
-- **64-bit** IDs (32 index + 32 generation) — consistent with `../RIVET.md` §7.
+- **64-bit** IDs (32 index + 32 generation) — consistent with `../RIVET.md` §5.
 - `serde`/`toml` are accepted (pure Rust); hand-written TOML parsing is not required.
 - **No** "0% CPU" figure is published: blocking on `epoll` while idle is a mechanism; the number is measured (ADR-08).
 
-## 12. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 12. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 All are **unverified targets**: insert/`get`/`remove` in tens of ns, iteration over 10k objects, event dispatch latency, RAM of an empty context, initialization time. Planned method: `criterion`, `perf`, `/proc/<pid>/status`.
 

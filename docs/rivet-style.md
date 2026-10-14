@@ -6,7 +6,6 @@
 - **Date:** 2026-10-11
 - **Layer:** 3 (presentation)
 - **Depends on:** `rivet-foundation`; consumed by `rivet-ui` / `rivet-canvas`.
-- **Replaces:** GTK CSS (GTK3 `GtkStyleContext` / GTK4 CSS).
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -96,7 +95,7 @@ impl StyleTable { pub fn get(&self, kind: WidgetKind, state: WidgetState) -> &Wi
 - Any claim of "0% CPU" on theme change is withdrawn: the valid claim is that the change is **O(1)** (table swap).
 - **Flat-table** model instead of a CSS cascade.
 
-## 11. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 11. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 Table size in RAM, ns per style lookup, µs of DSL compilation, theme swap time. Method: `criterion` + `heaptrack`.
 

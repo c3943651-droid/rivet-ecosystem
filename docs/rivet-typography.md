@@ -6,7 +6,6 @@ Rivet's **fonts and text** subsystem.
 - **Date:** 2026-10-11
 - **Layer:** 2.5 (text support over canvas)
 - **Depends on:** `rivet-foundation`; consumed by `rivet-canvas` / `rivet-ui`.
-- **Replaces:** Pango + FriBidi + HarfBuzz (partially, see §7).
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -88,6 +87,6 @@ impl Font { pub fn layout(&self, text: &str) -> TextLayout; pub fn metrics(&self
 - VRAM per glyph in **KB**.
 - No GUI C dependencies.
 
-## 11. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 11. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 Font load/parse time, rasterization ms per glyph, cache hit ratio, RAM per loaded font, atlas VRAM, (subjective) quality at small sizes. Method: `criterion` + atlas telemetry.

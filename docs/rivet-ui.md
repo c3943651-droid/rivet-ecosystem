@@ -6,7 +6,6 @@
 - **Date:** 2026-10-11
 - **Layer:** 4 (highest level of the toolkit)
 - **Depends on:** `rivet-foundation`, `rivet-canvas`, `rivet-typography`, `rivet-style`, `rivet-image`, `rivet-window` (events).
-- **Replaces:** the GTK widget level (`GtkWidget`, boxes, buttons, etc.).
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -138,7 +137,7 @@ Crate users: create widgets, nest them, connect signals/callbacks, and run the l
 - The "24 bytes per widget" figure is withdrawn (ADR-08): it depends on the kind; it is measured.
 - No "0% CPU" claims.
 
-## 15. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 15. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 ns of `create`/`destroy`/`add_child`, ns of hit-test over N widgets, µs of layout of a typical tree, RAM per widget (per kind), events/s dispatched, cost of incremental damage. Method: `criterion` + `heaptrack` + `FrameStats`.
 

@@ -7,7 +7,6 @@
 - **Layer:** 2 (communication with the window system)
 - **Depends on:** `rivet-foundation`
 - **Consumed by:** `rivet-canvas`, `rivet-ui`
-- **Replaces:** part of GTK and windowing libraries.
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -99,7 +98,7 @@ pub enum WindowError { ... }
 
 - **Rust:** Wayland binding (`wayland-client`/`wayland-protocols` — Rust) or minimal FFI to `libwayland`; **`libxkbcommon`** (system C, allowed).
 - **GL:** only the *display*/EGL needed for the context (shared with canvas); no pixels here.
-- **No GTK, no Qt, no external toolkit.**
+- No GUI C libraries; no external toolkit.
 
 ## 11. Scope
 
@@ -117,6 +116,6 @@ pub enum WindowError { ... }
 - **`rivet-canvas` does not depend on `rivet-window`** (ADR in `../RIVET.md`).
 - No "0% CPU" promise (ADR-08).
 
-## 13. Metrics (targets, to be measured — `../RIVET.md` §14)
+## 13. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 Event→frame latency, per-frame cost with `wl_shm` vs DMA-BUF, RAM usage of a 1080p buffer, handshake time, presentation overhead. Method: `perf`, ftrace, own frame counters.
