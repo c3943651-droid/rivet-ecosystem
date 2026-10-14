@@ -1,4 +1,4 @@
-//! Errores de `rivet-canvas`.
+//! Errors of `rivet-canvas`.
 
 use std::fmt;
 

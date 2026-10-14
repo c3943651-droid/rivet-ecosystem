@@ -1,6 +1,6 @@
-//! Métricas tipográficas escaladas a píxeles.
+//! Typographic metrics scaled to pixels.
 //!
-//! Fuente de datos: tablas `head`/`hhea`/`hmtx` vía ttf-parser.
+//! Data source: `head`/`hhea`/`hmtx` tables via ttf-parser.
 
 use ttf_parser::GlyphId;
 

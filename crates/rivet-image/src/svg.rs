@@ -1,7 +1,7 @@
-//! Rasterizado de SVG con `resvg` (Rust puro; sin `librsvg`, doc §3).
+//! SVG rasterization with `resvg` (pure Rust; no `librsvg`, doc §3).
 //!
-//! El SVG se rasteriza **al tamaño solicitado** (doc §6: no se cachea un
-//! SVG gigante). La salida de tiny-skia ya es RGBA premultiplicado.
+//! The SVG is rasterized **at the requested size** (doc §6: a giant SVG is
+//! not cached). tiny-skia output is already premultiplied RGBA.
 
 use crate::data::ImageData;
 use crate::error::{ImageError, Result};

@@ -1,7 +1,7 @@
-//! Color RGBA premultiplicado.
+//! Premultiplied RGBA color.
 //!
-//! `docs/rivet-canvas.md` §4: los colores del pipeline son **premultiplicados**
-//! (rgb ya escalados por alfa); el blending GL usa `ONE, ONE_MINUS_SRC_ALPHA`.
+//! `docs/rivet-canvas.md` §4: pipeline colors are **premultiplied**
+//! (rgb already scaled by alpha); GL blending uses `ONE, ONE_MINUS_SRC_ALPHA`.
 
 use std::fmt;
 

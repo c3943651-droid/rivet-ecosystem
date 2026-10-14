@@ -1,11 +1,11 @@
-//! Rivet Style: estilos precompilados en tablas planas.
+//! Rivet Style: styles precompiled into flat tables.
 //!
-//! Pipeline: DSL `.rivet-style` → lexer/parser propios → compilador que
-//! resuelve temas y deriva colores (`lighten`/`darken`/`alpha`/`mix` en
-//! compilación, ADR-06) → [`StyleTable`] indexable por (widget, estado).
+//! Pipeline: `.rivet-style` DSL -> custom lexer/parser -> compiler that
+//! resolves themes and derives colors (`lighten`/`darken`/`alpha`/`mix`
+//! at compilation, ADR-06) -> [`StyleTable`] indexed by (widget, state).
 //!
-//! Aplicar un estilo en el render es un doble índice a arrays: **O(1)**.
-//! Cambiar de tema es intercambiar la tabla: **O(1)** (swap, ADR-06).
+//! Applying a style in the render is a double index into arrays: **O(1)**.
+//! Switching themes is swapping the table: **O(1)** (swap, ADR-06).
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

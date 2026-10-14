@@ -1,4 +1,4 @@
-//! [`Font`]: cara + tamaño + cadena de fallback; layout simple de texto.
+//! [`Font`]: face + size + fallback chain; simple text layout.
 
 use ttf_parser::GlyphId;
 

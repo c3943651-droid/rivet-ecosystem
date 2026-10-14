@@ -1,5 +1,5 @@
-//! API pública: `Wayland` (conexión), `Window` (toplevel/layer-shell) y
-//! clipboard básico.
+//! Public API: `Wayland` (connection), `Window` (toplevel/layer-shell) and
+//! basic clipboard.
 
 use std::cell::RefCell;
 use std::os::fd::{AsFd as _, AsRawFd as _};

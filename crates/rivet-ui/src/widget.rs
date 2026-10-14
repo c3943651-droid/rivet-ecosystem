@@ -1,7 +1,7 @@
-//! Nodos del árbol de widgets: `WidgetNode` común (ADR-03) e `WidgetId`.
+//! Widget tree nodes: the common `WidgetNode` (ADR-03) and `WidgetId`.
 //!
-//! El nodo es pequeño y homogéneo (relaciones, estado, geometría); los
-//! datos específicos de cada tipo viven en slabs por tipo del
+//! The node is small and homogeneous (relationships, state, geometry);
+//! kind-specific data lives in the per-kind slabs of the
 //! [`WidgetRegistry`](crate::registry::WidgetRegistry).
 
 use rivet_canvas::Rect;

@@ -1,4 +1,4 @@
-//! Utilidades comunes del ecosistema: tiempo, IDs, UTF-8 y endianness.
+//! Common ecosystem utilities: time, IDs, UTF-8 and endianness.
 
 pub mod bytes;
 pub mod clock;

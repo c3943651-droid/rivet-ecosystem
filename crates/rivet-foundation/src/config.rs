@@ -1,9 +1,9 @@
-//! Configuración TOML tipada con valores por defecto y hot-reload.
+//! Typed TOML configuration with default values and hot-reload.
 //!
-//! `docs/rivet-foundation.md` §5: prioridad `~/.config/rivet/config.toml` +
-//! defaults (ruta configurable); hot-reload vía `inotify` registrado en el
-//! bucle de eventos (cooldown 100 ms). Si el parseo falla, se conserva la
-//! configuración anterior y se avisa (el watcher entrega el `Err`).
+//! `docs/rivet-foundation.md` §5: priority `~/.config/rivet/config.toml` +
+//! defaults (configurable path); hot-reload via `inotify` registered in the
+//! event loop (100 ms cooldown). If parsing fails, the previous
+//! configuration is kept and a warning is issued (the watcher delivers the `Err`).
 
 use std::cell::RefCell;
 use std::fs;

@@ -1,7 +1,7 @@
-//! Smoke test de `Application` contra un compositor Wayland real.
+//! Smoke test of `Application` against a real Wayland compositor.
 //!
-//! Abre una ventana, espera configure, presenta un frame con UI completa y
-//! cierra. Se salta sin `$WAYLAND_DISPLAY`.
+//! Opens a window, waits for configure, presents a frame with a full UI and
+//! closes. Skipped without `$WAYLAND_DISPLAY`.
 
 use rivet_ui::{Application, Ui};
 

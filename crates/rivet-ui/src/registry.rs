@@ -1,8 +1,8 @@
-//! `WidgetRegistry`: autoridad de creación y árbol (ADR-03/04).
+//! `WidgetRegistry`: creation and tree authority (ADR-03/04).
 //!
-//! Nodo común en un slab de foundation; **un slab por tipo** para los
-//! datos específicos (sin *padding* del widget más grande). Hijos por
-//! enlaces intrusivos O(1).
+//! Common node in a foundation slab; **one slab per kind** for
+//! kind-specific data (no *padding* from the largest widget). Children
+//! via O(1) intrusive links.
 
 use rivet_canvas::Rect;
 use rivet_foundation::slab::Slab;

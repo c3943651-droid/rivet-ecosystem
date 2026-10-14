@@ -1,12 +1,12 @@
-//! Rivet Typography: de TrueType/OpenType a glifos rasterizados + métricas.
+//! Rivet Typography: from TrueType/OpenType to rasterized glyphs + metrics.
 //!
-//! Descubrimiento con `fontdb` (sin fontconfig, ADR-05), parseo con
-//! `ttf-parser` (`cmap` 4/12, `glyf`/CFF), rasterizado propio con cobertura
-//! analítica (De Casteljau + scanline), kerning básico (`kern` formato 0),
-//! caché LRU y atlas de glifos para `rivet-canvas`.
+//! Discovery with `fontdb` (no fontconfig, ADR-05), parsing with
+//! `ttf-parser` (`cmap` 4/12, `glyf`/CFF), own rasterization with analytic
+//! coverage (De Casteljau + scanline), basic kerning (`kern` format 0),
+//! LRU cache, and a glyph atlas for `rivet-canvas`.
 //!
-//! Limitaciones v1 (doc §5): shaping simple LTR; bidi/GSUB/GPOS completos,
-//! hinting y fuentes variables quedan para v1.x/v2.
+//! v1 limitations (doc §5): simple LTR shaping; full bidi/GSUB/GPOS,
+//! hinting, and variable fonts are deferred to v1.x/v2.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

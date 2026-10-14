@@ -1,10 +1,10 @@
-//! Rivet Canvas: render 2D por GPU (OpenGL 3.3 Core + EGL).
+//! Rivet Canvas: GPU 2D rendering (OpenGL 3.3 Core + EGL).
 //!
-//! Shaders, geometría, texturas y efectos (blur por FBO ping-pong).
-//! Escribe en el buffer que `rivet-window` presenta; **no** depende de
-//! `rivet-window` (frontera fija: window = protocolo, canvas = render).
+//! Shaders, geometry, textures, and effects (blur via FBO ping-pong).
+//! Writes into the buffer that `rivet-window` presents; does **not** depend on
+//! `rivet-window` (fixed boundary: window = protocol, canvas = rendering).
 //!
-//! Pipeline por frame: llenar [`RenderQueue`] → `GraphicsContext::render` →
+//! Per-frame pipeline: fill [`RenderQueue`] → `GraphicsContext::render` →
 //! `GraphicsContext::present`.
 
 #![forbid(unsafe_op_in_unsafe_fn)]

@@ -1,4 +1,4 @@
-//! Errores de `rivet-ui`.
+//! Errors of `rivet-ui`.
 
 use std::fmt;
 

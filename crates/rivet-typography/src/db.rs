@@ -1,7 +1,7 @@
-//! Descubrimiento y carga de fuentes con `fontdb` (Rust puro, ADR-05).
+//! Font discovery and loading with `fontdb` (pure Rust, ADR-05).
 //!
-//! **Sin `fontconfig`**: el escaneo usa los directorios estándar de
-//! `fontconfig` vía fontdb, sin enlazar la librería C.
+//! **No `fontconfig`**: scanning uses `fontconfig`'s standard directories
+//! via fontdb, without linking the C library.
 
 use std::path::Path;
 

@@ -1,7 +1,7 @@
-//! Geometría 2D: rectángulos, transformaciones afines y teselado de quads.
+//! 2D geometry: rectangles, affine transforms, and quad tessellation.
 //!
-//! Coordenadas en píxeles con **Y hacia abajo** (origen arriba-izquierda);
-//! la proyección del renderer invierte Y para GL.
+//! Coordinates in pixels with **Y pointing down** (top-left origin);
+//! the renderer projection flips Y for GL.
 
 use crate::color::Color;
 

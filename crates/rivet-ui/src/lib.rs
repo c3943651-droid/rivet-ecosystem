@@ -1,10 +1,10 @@
-//! Rivet UI: widgets por composición, layout, eventos y foco.
+//! Rivet UI: widgets by composition, layout, events and focus.
 //!
-//! Almacén de dos niveles (ADR-03): nodo común `WidgetNode` en slab +
-//! **slabs por tipo** para los datos específicos. Hijos por enlaces
-//! intrusivos (ADR-04), IDs de 64 bits con generación. Estilos consultados
-//! por (tipo, estado) en tablas planas O(1) de `rivet-style`; texto por el
-//! atlas de `rivet-typography`; dibujo emitido a la cola de `rivet-canvas`.
+//! Two-level store (ADR-03): a common `WidgetNode` in a slab +
+//! **slabs per kind** for kind-specific data. Children via intrusive
+//! links (ADR-04), 64-bit IDs with generation. Styles looked up
+//! by (kind, state) in flat O(1) tables from `rivet-style`; text via the
+//! atlas from `rivet-typography`; drawing emitted to the `rivet-canvas` queue.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

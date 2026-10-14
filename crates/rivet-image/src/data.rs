@@ -1,8 +1,8 @@
-//! [`ImageData`]: píxeles RGBA8 **premultiplicados**, listos para textura.
+//! [`ImageData`]: premultiplied RGBA8 pixels, ready for texturing.
 //!
-//! Doc §3/§9: salida coherente con canvas (blending `ONE,
-//! ONE_MINUS_SRC_ALPHA`). Los decodificadores entregan alfa recta; la
-//! conversión ocurre en `decode`/`svg`.
+//! Doc §3/§9: output consistent with canvas (`ONE,
+//! ONE_MINUS_SRC_ALPHA` blending). Decoders deliver straight alpha; the
+//! conversion happens in `decode`/`svg`.
 
 use crate::transform;
 

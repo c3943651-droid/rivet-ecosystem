@@ -1,7 +1,7 @@
-//! Color RGBA propio del subsistema de estilos (Rust puro, sin crates de
-//! color). Alfa recta en representación; la derivación de color
-//! (`lighten`/`darken`/`alpha`/`mix`) ocurre en **compilación** del tema
-//! (ADR-06), nunca por frame.
+//! Own RGBA color for the style subsystem (pure Rust, no color crates).
+//! Straight alpha in the representation; color derivation
+//! (`lighten`/`darken`/`alpha`/`mix`) happens at theme **compilation**
+//! (ADR-06), never per frame.
 
 use std::fmt;
 

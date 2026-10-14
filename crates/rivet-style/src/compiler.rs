@@ -1,7 +1,7 @@
-//! Compilador: DSL → AST → resolución de tema/derivados → [`StyleTable`].
+//! Compiler: DSL -> AST -> theme/derived-value resolution -> [`StyleTable`].
 //!
-//! Todo el trabajo caro (parseo, funciones de color, herencia de estados)
-//! ocurre **aquí**, una vez por tema; el runtime solo indexa (doc §2).
+//! All the expensive work (parsing, color functions, state inheritance)
+//! happens **here**, once per theme; the runtime only indexes (doc §2).
 
 use std::collections::HashMap;
 

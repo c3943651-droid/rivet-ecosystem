@@ -1,7 +1,7 @@
-//! Caché LRU de imágenes por (clave, tamaño, escala, tinte).
+//! LRU image cache keyed by (key, size, scale, tint).
 //!
-//! Doc §6: evita re-decodificar/re-rasterizar; los SVG se rasterizan al
-//! tamaño pedido y se cachean bajo esa clave exacta.
+//! Doc §6: avoids re-decoding/re-rasterizing; SVGs are rasterized at the
+//! requested size and cached under that exact key.
 
 use std::collections::HashMap;
 

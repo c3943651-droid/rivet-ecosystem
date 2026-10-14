@@ -1,11 +1,11 @@
-//! Kerning horizontal: tabla `kern` (formato 0) + subset `GPOS` PairPos.
+//! Horizontal kerning: `kern` table (format 0) + `GPOS` PairPos subset.
 //!
-//! `docs/rivet-typography.md` §5: v1 usa avance + kerning básico. Aquí hay
-//! dos fuentes:
-//! - `kern` (formato 0): parseada a mano (ttf-parser no la expone).
-//! - `GPOS` PairPos (formatos 1 y 2): la **spec** la parsea ttf-parser
-//!   (LayoutTable/PairAdjustment); la orquestación (feature `kern` →
-//!   lookups → consulta de par) es nuestra.
+//! `docs/rivet-typography.md` §5: v1 uses advance + basic kerning. There are
+//! two sources here:
+//! - `kern` (format 0): parsed by hand (ttf-parser does not expose it).
+//! - `GPOS` PairPos (formats 1 and 2): the **spec** part is parsed by ttf-parser
+//!   (LayoutTable/PairAdjustment); the orchestration (feature `kern` →
+//!   lookups → pair lookup) is ours.
 
 use std::collections::HashMap;
 

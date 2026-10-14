@@ -209,4 +209,4 @@ not executed; comparisons are pending until a dedicated harness exists.
 * [x] v1 verified: 24 test suites passing in CI; live integration test executed successfully on a native Wayland compositor.
 * [x] Initial empirical benchmarking suite established (§12).
 * [ ] Phase 5 (Pending): Public crate publication (`crates.io`), version tagging (`v0.1.0`), and `develop` -> `main` integration.
-* [ ] Source-level module comments (`//!`, 322 across 68 files) pending English migration — tracked in [#1](https://github.com/c3943651-droid/rivet-ecosystem/issues/1).
+* [x] Source-level module comments (`//!`) migrated to English across all crates, tests, and benches ([#1](https://github.com/c3943651-droid/rivet-ecosystem/issues/1)).

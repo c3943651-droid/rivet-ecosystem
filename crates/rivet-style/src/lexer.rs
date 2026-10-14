@@ -1,8 +1,8 @@
-//! Tokenizador del DSL `.rivet-style`: casero, sin dependencias.
+//! Tokenizer for the `.rivet-style` DSL: hand-written, no dependencies.
 //!
-//! Tokens: identificadores, números, porcentajes, colores hex,
-//! puntuación (`{ } : ; ( ) ,`) y palabras clave. Comentarios `//` y
-//! `/* … */` desechados en el lexer.
+//! Tokens: identifiers, numbers, percentages, hex colors,
+//! punctuation (`{ } : ; ( ) ,`) and keywords. `//` and
+//! `/* ... */` comments are discarded in the lexer.
 
 use std::fmt;
 

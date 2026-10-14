@@ -1,15 +1,15 @@
-//! Rivet Window: cliente Wayland nativo.
+//! Rivet Window: native Wayland client.
 //!
-//! Gestiona `wl_registry`, `xdg_shell` (toplevels), entrada (`wl_seat` +
-//! `libxkbcommon`), buffers `wl_shm` (memfd + mmap) y frame callbacks,
-//! integrados con el bucle `epoll` de `rivet-foundation`.
+//! Manages `wl_registry`, `xdg_shell` (toplevels), input (`wl_seat` +
+//! `libxkbcommon`), `wl_shm` buffers (memfd + mmap) and frame callbacks,
+//! integrated with the `epoll` event loop of `rivet-foundation`.
 //!
-//! **No** renderiza: entrega superficie/buffer a `rivet-canvas` (canvas no
-//! depende de window — frontera fija del ecosistema).
+//! It does **not** render: it hands the surface/buffer to `rivet-canvas` (canvas does
+//! not depend on window — a fixed boundary of the ecosystem).
 //!
-//! v1: toplevel + layer-shell + wl_shm + teclado/puntero/touch/gestos +
-//! clipboard/DnD de texto + HiDPI entero.
-//! Horizonte v1.x: DMA-BUF, decoraciones del lado del cliente.
+//! v1: toplevel + layer-shell + wl_shm + keyboard/pointer/touch/gestures +
+//! text clipboard/DnD + integer HiDPI.
+//! v1.x horizon: DMA-BUF, client-side decorations.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

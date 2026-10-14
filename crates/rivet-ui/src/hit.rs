@@ -1,8 +1,8 @@
-//! Hit-testing geométrico: coordenada → widget (doc §7).
+//! Geometric hit-testing: coordinate → widget (doc §7).
 //!
-//! Recorre **de atrás hacia delante** (último hijo primero): el orden de
-//! pintado es el orden del árbol, así que los últimos hermanos están al
-//! frente. Respeta visibilidad y `DISABLED` (no interactivo).
+//! Traverses **back to front** (last child first): the paint order is
+//! the tree order, so later siblings are at the
+//! front. Respects visibility and `DISABLED` (not interactive).
 
 use crate::registry::WidgetRegistry;
 use crate::widget::{state, WidgetId};

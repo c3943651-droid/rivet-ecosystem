@@ -1,4 +1,4 @@
-//! Gestión de texturas RGBA con slab de IDs y contabilidad de VRAM.
+//! RGBA texture management with an ID slab and VRAM accounting.
 
 use std::collections::HashMap;
 

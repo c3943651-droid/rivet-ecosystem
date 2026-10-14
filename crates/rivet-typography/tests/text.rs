@@ -1,5 +1,5 @@
-//! Tests de integración: fuentes del sistema (DejaVu si está) y la fuente
-//! empaquetada Inter (deterministas, sin dependencia del entorno).
+//! Integration tests: system fonts (DejaVu when present) and the bundled
+//! Inter font (deterministic, no environment dependencies).
 
 use rivet_typography::{FontDb, GlyphAtlas, GlyphCache, BUNDLED_FONT, BUNDLED_FONT_LICENSE};
 

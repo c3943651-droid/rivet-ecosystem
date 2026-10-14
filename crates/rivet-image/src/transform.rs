@@ -1,5 +1,5 @@
-//! Transformaciones: escalado (nearest/bilinear), recorte, composición y
-//! recoloreado. Todo sobre RGBA premultiplicado.
+//! Transformations: scaling (nearest/bilinear), cropping, composition and
+//! recoloring. All on premultiplied RGBA.
 
 use crate::data::ImageData;
 

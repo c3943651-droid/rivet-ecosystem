@@ -1,6 +1,6 @@
-//! Tipos de error del núcleo.
+//! Core error types.
 //!
-//! Toda operación pública falible del ecosistema devuelve
+//! Every fallible public operation in the ecosystem returns
 //! [`Result<T>`](crate::error::Result) = `Result<T, FoundationError>`.
 
 use std::fmt;

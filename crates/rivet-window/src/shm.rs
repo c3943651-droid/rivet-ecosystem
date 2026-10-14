@@ -1,8 +1,8 @@
-//! Buffer de píxeles en memoria compartida (`memfd` + `mmap`).
+//! Pixel buffer in shared memory (`memfd` + `mmap`).
 //!
-//! Parte CPU pura de `wl_shm` (ADR-02: v1 usa `wl_shm`; hay una copia por
-//! frame). El pool Wayland (`WlShmPool`/`WlBuffer`) vive en [`crate::state`];
-//! este tipo solo gestiona la memoria: `slots` frames contiguos.
+//! Pure CPU part of `wl_shm` (ADR-02: v1 uses `wl_shm`; there is one copy per
+//! frame). The Wayland pool (`WlShmPool`/`WlBuffer`) lives in [`crate::state`];
+//! this type only manages the memory: `slots` contiguous frames.
 
 use std::ffi::CString;
 use std::os::fd::{AsFd, BorrowedFd};

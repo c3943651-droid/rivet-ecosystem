@@ -1,4 +1,4 @@
-//! Tests de integración GPU con contexto EGL headless.
+//! GPU integration tests with a headless EGL context.
 //!
 //! Si no hay `libEGL`/driver GL disponibles (p. ej. CI sin GPU), los tests se
 //! saltan con un aviso en lugar de fallar. En CI se usa Mesa llvmpipe

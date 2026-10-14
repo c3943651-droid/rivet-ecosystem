@@ -1,9 +1,9 @@
-//! Primitivas vectoriales: círculos y rectángulos redondeados por
-//! *fan-decomposition* (implementación propia, sin crates de teselación).
+//! Vector primitives: circles and rounded rectangles via
+//! *fan-decomposition* (own implementation, no tessellation crates).
 //!
-//! Cada forma se emite como abanico de triángulos (vértice central +
-//! perímetro) al lote plano activo: coste O(n) en CPU, un solo draw call
-//! por lote gracias al batching de [`RenderQueue`].
+//! Each shape is emitted as a triangle fan (central vertex + perimeter)
+//! into the active flat batch: O(n) CPU cost, a single draw call
+//! per batch thanks to [`RenderQueue`] batching.
 
 use crate::color::Color;
 use crate::geometry::Rect;

@@ -1,5 +1,5 @@
-//! Tests de integración: compilar el DSL de la doc y consultar las tablas
-//! (todo determinista, sin dependencias externas).
+//! Integration tests: compile the documented DSL and query the tables
+//! (fully deterministic, no external dependencies).
 
 use rivet_style::{compile, Color, Ease, Insets, WidgetKind, WidgetState, EXAMPLE_DSL};
 

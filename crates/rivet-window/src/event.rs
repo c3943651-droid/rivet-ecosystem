@@ -1,7 +1,7 @@
-//! Eventos de ventana traducidos al dominio Rivet.
+//! Window events translated to the Rivet domain.
 //!
-//! `docs/rivet-window.md` §6: los eventos Wayland se traducen a tipos propios
-//! y se entregan al consumidor; `rivet-window` no decide foco ni hit-testing.
+//! `docs/rivet-window.md` §6: Wayland events are translated to internal types
+//! and delivered to the consumer; `rivet-window` does not decide focus or hit-testing.
 
 /// Identificador de ventana.
 pub type WindowId = u64;

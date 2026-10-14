@@ -1,5 +1,5 @@
-//! AST del DSL `.rivet-style`: representación intermedia entre el parser y
-//! el compilador a tablas planas.
+//! AST of the `.rivet-style` DSL: intermediate representation between
+//! the parser and the compiler into flat tables.
 
 use crate::color::Color;
 

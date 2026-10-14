@@ -1,9 +1,9 @@
-//! Rivet Image: decodificación de imágenes, rasterizado SVG y resolución de
-//! iconos por tema freedesktop.
+//! Rivet Image: image decoding, SVG rasterization and icon resolution by
+//! freedesktop theme.
 //!
-//! PNG/JPEG/WebP con crate `image`, SVG con `resvg` (todo Rust puro; sin
-//! GdkPixbuf ni `librsvg`). Salida RGBA8 **premultiplicado** lista para
-//! textura de canvas (doc §3/§9).
+//! PNG/JPEG/WebP with the `image` crate, SVG with `resvg` (all pure Rust;
+//! no GdkPixbuf or `librsvg`). Premultiplied RGBA8 output ready for
+//! canvas texturing (doc §3/§9).
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

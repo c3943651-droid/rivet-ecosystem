@@ -1,7 +1,7 @@
-//! Icono *missing* generado proceduralmente (fallback empaquetado, doc §4).
+//! Procedurally generated *missing* icon (packaged fallback, doc §4).
 //!
-//! No requiere asset: se dibuja un documento con borde y una X roja sobre
-//! fondo transparente, escalable a cualquier tamaño.
+//! Requires no asset: a document with a border and a red X is drawn over
+//! a transparent background, scalable to any size.
 
 use crate::data::ImageData;
 

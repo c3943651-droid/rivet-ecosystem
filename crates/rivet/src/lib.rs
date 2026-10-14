@@ -1,17 +1,17 @@
-//! Rivet: fachada del ecosistema.
+//! Rivet: the ecosystem facade.
 //!
-//! Re-exporta `rivet-foundation`, `rivet-window`, `rivet-canvas`,
-//! `rivet-typography`, `rivet-image`, `rivet-style` y `rivet-ui`.
-//! Equivalente al "paraguas" de `#include <gtk/gtk.h>`.
+//! Re-exports `rivet-foundation`, `rivet-window`, `rivet-canvas`,
+//! `rivet-typography`, `rivet-image`, `rivet-style` and `rivet-ui`.
+//! Equivalent to the "umbrella" of `#include <gtk/gtk.h>`.
 //!
-//! Para apps completas usa el [`prelude`]; las crates siguen
-//! accesibles por separado (p. ej. solo el slab de `foundation` o el
-//! decodificador de `image` sin arrastrar la UI).
+//! For full applications use the [`prelude`]; the crates remain
+//! accessible separately (e.g. only the `foundation` slab or the
+//! `image` decoder without pulling in the UI).
 //!
 //! ```
 //! use rivet::prelude::*;
 //!
-//! // La UI se compone por registro (sin herencia):
+//! // The UI is composed through the registry (no inheritance):
 //! let mut app = Application::new("Demo", 400, 300).unwrap();
 //! let ui = app.ui_mut();
 //! let root = ui.registry.create_panel(true);
@@ -20,8 +20,8 @@
 //! ui.registry.add_child(root, label).unwrap();
 //! ```
 //!
-//! El bucle completo: `app.run()` — eventos de Wayland → UI → render GL
-//! → buffer `wl_shm` presentado al compositor (v1).
+//! The full loop: `app.run()` — Wayland events → UI → GL render
+//! → `wl_shm` buffer presented to the compositor (v1).
 
 pub use rivet_canvas as canvas;
 pub use rivet_foundation as foundation;

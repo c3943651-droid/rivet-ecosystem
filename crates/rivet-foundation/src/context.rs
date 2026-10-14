@@ -1,8 +1,8 @@
-//! Contexto del ecosistema: punto de integración con inyección explícita.
+//! Ecosystem context: integration point with explicit injection.
 //!
-//! `docs/rivet-foundation.md` §8: cada crate recibe `&Context`/`&mut Context`
-//! (sin singletons). Se crea con [`ContextBuilder::build`]; el flujo típico es
-//! construir contexto → cargar config → registrar módulos → `event_loop().run()`.
+//! `docs/rivet-foundation.md` §8: each crate receives `&Context`/`&mut Context`
+//! (no singletons). It is created with [`ContextBuilder::build`]; the typical flow is
+//! build context → load config → register modules → `event_loop().run()`.
 
 use std::any::Any;
 use std::path::{Path, PathBuf};

@@ -1,8 +1,8 @@
-//! Despacho de eventos: entrada de window → eventos de widget con
-//! hit-testing, estados hover/active, clic con *bubbling* y foco (doc §7).
+//! Event dispatch: window input → widget events with
+//! hit-testing, hover/active states, click with *bubbling* and focus (doc §7).
 //!
-//! Fases v1: el clic se entrega al objetivo y **burbujea** hacia la raíz
-//! hasta que un ancestro lo maneja (el primer botón de la cadena).
+//! v1 phases: the click is delivered to the target and **bubbles** toward
+//! the root until an ancestor handles it (the first button in the chain).
 
 use crate::hit::hit_test;
 use crate::widget::{state, WidgetId, WidgetKind};

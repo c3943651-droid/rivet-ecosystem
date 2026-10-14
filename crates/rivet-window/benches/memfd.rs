@@ -1,5 +1,5 @@
-//! Métricas §14 (RIVET.md): `memfd_create` vs `shm_open` (baseline) y
-//! creación del pool de buffers 1080p (memfd + ftruncate + mmap).
+//! Metrics (RIVET.md §12): `memfd_create` vs `shm_open` (baseline) and
+//! 1080p buffer pool creation (memfd + ftruncate + mmap).
 //!
 //! `cargo bench -p rivet-window`
 

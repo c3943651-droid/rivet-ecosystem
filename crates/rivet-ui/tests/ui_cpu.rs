@@ -1,5 +1,5 @@
-//! Tests CPU del núcleo de UI: árbol, layout, hit-test, foco y despacho
-//! (sin GL ni Wayland; el TextRenderer solo mide).
+//! CPU tests of the UI core: tree, layout, hit-test, focus and dispatch
+//! (no GL or Wayland; the TextRenderer only measures).
 
 use rivet_ui::event::{EventDispatcher, UiInput};
 use rivet_ui::focus::FocusManager;

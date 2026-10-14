@@ -1,8 +1,8 @@
-//! Layout: dos pasadas (medir → posicionar) sobre el modelo de caja
-//! simplificado de v1 (doc §8).
+//! Layout: two passes (measure → position) over the simplified box model
+//! of v1 (doc §8).
 //!
-//! Medición: labels consultan métricas de typography; botones añaden el
-//! padding del estilo; contenedores suman (o maximizan) según dirección.
+//! Measurement: labels query typography metrics; buttons add the
+//! style padding; containers sum (or maximize) depending on direction.
 
 use rivet_canvas::Rect;
 

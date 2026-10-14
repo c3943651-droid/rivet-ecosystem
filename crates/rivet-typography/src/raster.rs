@@ -1,8 +1,8 @@
-//! Rasterizador de glifos con cobertura analítica (antialiasing).
+//! Glyph rasterizer with analytic coverage (antialiasing).
 //!
-//! Pipeline: contornos ttf-parser (`glyf`/CFF) → aplanado de Béziers
-//! (De Casteljau) → segmentos → *scanline* con área exacta por píxel
-//! (regla de enrollado distinto de cero).
+//! Pipeline: ttf-parser outlines (`glyf`/CFF) → Bezier flattening
+//! (De Casteljau) → segments → *scanline* with exact per-pixel area
+//! (non-zero winding rule).
 
 use ttf_parser::OutlineBuilder;
 

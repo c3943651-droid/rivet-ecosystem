@@ -1,7 +1,7 @@
-//! Codificación/decodificación de IDs de 64 bits del ecosistema.
+//! Encoding/decoding of the ecosystem's 64-bit IDs.
 //!
-//! Formato cerrado (`docs/RIVET.md` §7): bits `0..=31` índice,
-//! bits `32..=63` generación; `id = (generación << 32) | índice`.
+//! Closed format (`docs/RIVET.md` §7): bits `0..=31` index,
+//! bits `32..=63` generation; `id = (generation << 32) | index`.
 
 /// Construye un ID de 64 bits a partir de generación e índice.
 #[inline]

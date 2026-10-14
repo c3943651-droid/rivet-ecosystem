@@ -1,8 +1,8 @@
-//! Relojes monotónicos y simulables.
+//! Monotonic and simulatable clocks.
 //!
-//! `SystemClock` envuelve un instante monotónico (equivalente a
-//! `clock_gettime(CLOCK_MONOTONIC)`); `MockClock` permite avanzar el tiempo
-//! manualmente en tests.
+//! `SystemClock` wraps a monotonic instant (equivalent to
+//! `clock_gettime(CLOCK_MONOTONIC)`); `MockClock` allows advancing time
+//! manually in tests.
 
 use std::fmt;
 use std::time::{Duration, Instant};

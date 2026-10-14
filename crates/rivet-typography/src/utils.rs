@@ -1,4 +1,4 @@
-//! Lecturas little-endian sin dependencias externas.
+//! Little-endian reads without external dependencies.
 
 /// Lee un `u16` little-endian en `buf[off..off+2]`.
 ///

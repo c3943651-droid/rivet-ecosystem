@@ -1,5 +1,5 @@
-//! Gestión de foco de teclado (doc §7): widget enfocado, `Tab`-order y
-//! foco por puntero.
+//! Keyboard focus management (doc §7): focused widget, `Tab`-order and
+//! pointer focus.
 
 use crate::error::Result;
 use crate::registry::WidgetRegistry;

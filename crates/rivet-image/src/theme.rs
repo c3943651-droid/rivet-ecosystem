@@ -1,7 +1,7 @@
-//! Parseo de `index.theme` y rutas de búsqueda de temas freedesktop.
+//! Parsing of `index.theme` and freedesktop icon theme search paths.
 //!
-//! Especificación *Icon Theme*: herencia por `Inherits`, secciones por
-//! directorio con `Size`/`Scale`/`Type` y prioridad `.svg` > `.png` > `.xpm`.
+//! *Icon Theme* specification: inheritance via `Inherits`, per-directory
+//! sections with `Size`/`Scale`/`Type` and `.svg` > `.png` > `.xpm` priority.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

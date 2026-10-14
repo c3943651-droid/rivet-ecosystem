@@ -1,4 +1,4 @@
-//! Tests de integración con un compositor Wayland real.
+//! Integration tests against a real Wayland compositor.
 //!
 //! Se saltan si no hay `$WAYLAND_DISPLAY` (p. ej. CI sin Wayland). En
 //! escritorio Wayland verifican el ciclo completo: handshake → configure →

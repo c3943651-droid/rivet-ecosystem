@@ -1,4 +1,4 @@
-//! Errores de `rivet-image`.
+//! Errors of `rivet-image`.
 
 use std::fmt;
 

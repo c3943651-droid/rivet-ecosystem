@@ -1,7 +1,7 @@
-//! Compilación y caché de programas GL (GLSL 330 core).
+//! GL program compilation and caching (GLSL 330 core).
 //!
-//! `docs/rivet-canvas.md` §3: baseline OpenGL 3.3 Core, sin compute;
-//! blur por FBO ping-pong con gaussiano separable.
+//! `docs/rivet-canvas.md` §3: OpenGL 3.3 Core baseline, no compute;
+//! blur via FBO ping-pong with a separable Gaussian.
 
 use std::collections::HashMap;
 

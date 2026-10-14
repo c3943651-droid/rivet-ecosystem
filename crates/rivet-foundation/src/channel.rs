@@ -1,12 +1,12 @@
-//! Canales MPSC inter-hilo integrados con el bucle de eventos.
+//! Cross-thread MPSC channels integrated with the event loop.
 //!
-//! La pieza que desbloquea el trabajo en hilos secundarios (decodificación
-//! en paralelo, staging de subidas, cómputo pesado): un hilo manda con
-//! [`Sender::send`], el bucle principal despierta (eventfd registrado en
-//! epoll) y entrega en el mismo hilo del bucle.
+//! This enables work on secondary threads (parallel decoding,
+//! upload staging, heavy computation): a thread sends with
+//! [`Sender::send`], the main loop wakes up (eventfd registered in
+//! epoll) and delivers on the same loop thread.
 //!
-//! Implementación casera: cola `Mutex<VecDeque>` + `eventfd` + el `epoll`
-//! de [`EventLoop`](crate::event_loop::EventLoop). Sin crates externas.
+//! In-house implementation: `Mutex<VecDeque>` queue + `eventfd` + the `epoll`
+//! of [`EventLoop`](crate::event_loop::EventLoop). No external crates.
 
 use std::collections::VecDeque;
 use std::os::unix::io::{AsRawFd, FromRawFd, OwnedFd};

@@ -1,8 +1,8 @@
-//! Caché LRU de glifos rastrerizados.
+//! LRU cache of rasterized glyphs.
 //!
-//! `docs/rivet-typography.md` §6: clave (cara, tamaño, glifo, bin subpíxel)
-//! con desalojo del menos usado recientemente. v1 usa bin subpíxel 0
-//! (posiciones enteras); el campo existe para v1.x.
+//! `docs/rivet-typography.md` §6: key (face, size, glyph, subpixel bin)
+//! with least-recently-used eviction. v1 uses subpixel bin 0
+//! (integer positions); the field exists for v1.x.
 
 use std::collections::HashMap;
 

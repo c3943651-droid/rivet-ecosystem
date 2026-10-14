@@ -1,8 +1,8 @@
-//! Slab allocator con generaciones e IDs de 64 bits.
+//! Slab allocator with generations and 64-bit IDs.
 //!
-//! Almacén de objetos del ecosistema (`docs/rivet-foundation.md` §3):
-//! memoria plana y contigua, acceso O(1) por índice, reutilización LIFO de
-//! slots vía `free_list` e invalidación de IDs obsoletos por generación.
+//! Object store of the ecosystem (`docs/rivet-foundation.md` §3):
+//! flat contiguous memory, O(1) access by index, LIFO reuse of
+//! slots via `free_list` and stale-ID invalidation by generation.
 
 use crate::utils::ids::{id_generation, id_index, make_id};
 

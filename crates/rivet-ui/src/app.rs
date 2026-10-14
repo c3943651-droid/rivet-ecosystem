@@ -1,9 +1,9 @@
-//! `Application`: ciclo init/run/quit que conecta Wayland (window), GL
-//! offscreen (canvas) y el árbol de UI (doc §10 de rivet-ui, §2 de rivet).
+//! `Application`: init/run/quit cycle that connects Wayland (window), GL
+//! offscreen (canvas) and the UI tree (doc §10 of rivet-ui, §2 of rivet).
 //!
-//! Flujo v1 (`wl_shm`, ADR-02): eventos de window → UI → `RenderQueue` →
-//! GL al FBO → `read_pixels` → `present_rgba` (copia al buffer
-//! compartido). El frame callback del compositor pauta el redibujado.
+//! v1 flow (`wl_shm`, ADR-02): window events → UI → `RenderQueue` →
+//! GL to FBO → `read_pixels` → `present_rgba` (copy to the shared
+//! buffer). The compositor's frame callback schedules redraws.
 
 use rivet_canvas::{GraphicsContext, RenderQueue};
 use rivet_window::{Wayland, Window, WindowEvent, WindowOptions};

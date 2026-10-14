@@ -1,5 +1,5 @@
-//! Métricas §14 (RIVET.md): tamaño del nodo, hit-test, layout de árbol
-//! completo y recorrido de hijos sobre un árbol de ~1050 widgets.
+//! §14 metrics (RIVET.md): node size, hit-test, full-tree layout and
+//! child traversal over a tree of ~1050 widgets.
 //!
 //! `cargo bench -p rivet-ui`
 

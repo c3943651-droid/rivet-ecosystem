@@ -1,4 +1,4 @@
-//! Métricas §14 (RIVET.md): consulta de estilos O(1) y compilación del DSL.
+//! Metrics (RIVET.md §12): O(1) style lookup and DSL compilation.
 //!
 //! `cargo bench -p rivet-style`
 

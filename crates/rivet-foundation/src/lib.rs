@@ -1,10 +1,10 @@
-//! Rivet Foundation: núcleo del ecosistema.
+//! Rivet Foundation: ecosystem core.
 //!
-//! Slab con generaciones (IDs de 64 bits: 32 índice + 32 generación),
-//! bucle de eventos con `epoll`/`timerfd`/`signalfd`, configuración TOML con
-//! hot-reload, tipos de error, logging y utilidades comunes.
+//! Generational slab (64-bit IDs: 32-bit index + 32-bit generation),
+//! event loop with `epoll`/`timerfd`/`signalfd`, TOML configuration with
+//! hot-reload, error types, logging and common utilities.
 //!
-//! Nivel más bajo del ecosistema: no depende de ninguna otra crate Rivet.
+//! Lowest level of the ecosystem: it does not depend on any other Rivet crate.
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 pub mod channel;

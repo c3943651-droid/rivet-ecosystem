@@ -1,5 +1,5 @@
-//! Decodificación de PNG / JPEG / WebP (vía crate `image`, Rust puro) y
-//! detección de formato por número mágico.
+//! PNG / JPEG / WebP decoding (via the `image` crate, pure Rust) and
+//! format detection by magic number.
 
 use std::path::Path;
 

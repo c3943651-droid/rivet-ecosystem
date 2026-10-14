@@ -1,7 +1,7 @@
-//! Cara tipográfica: datos de la fuente + `ttf_parser::Face` parseada.
+//! Typographic face: font data + a parsed `ttf_parser::Face`.
 //!
-//! `Face` toma prestados los bytes de la fuente; aquí los mantenemos vivos en
-//! un `Arc<[u8]>` dentro de la misma estructura.
+//! `Face` borrows the font bytes; here they are kept alive in
+//! an `Arc<[u8]>` inside the same structure.
 
 use std::sync::Arc;
 

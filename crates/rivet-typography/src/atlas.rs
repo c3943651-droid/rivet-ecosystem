@@ -1,8 +1,8 @@
-//! Atlas de glifos: empaqueta máscaras en páginas con *shelf packing*.
+//! Glyph atlas: packs masks into pages using *shelf packing*.
 //!
-//! `docs/rivet-typography.md` §6: una o más texturas, subida incremental a
-//! GPU. Cada página es un bitmap de cobertura (1 byte/píxel) que canvas
-//! sube como textura RGBA premultiplicada blanca.
+//! `docs/rivet-typography.md` §6: one or more textures, incremental upload
+//! to the GPU. Each page is a coverage bitmap (1 byte/pixel) that canvas
+//! uploads as a white premultiplied RGBA texture.
 
 use crate::raster::RasterizedGlyph;
 

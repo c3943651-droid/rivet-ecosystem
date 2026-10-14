@@ -1,7 +1,7 @@
-//! Estado interno Wayland: globals, ventanas y todos los `Dispatch`.
+//! Internal Wayland state: globals, windows and all `Dispatch` implementations.
 //!
-//! Los detalles del protocolo quedan encapsulados aquí; la API pública
-//! (`crate::window`) expone `Wayland`/`Window`/`WindowEvent`.
+//! Protocol details are encapsulated here; the public API
+//! (`crate::window`) exposes `Wayland`/`Window`/`WindowEvent`.
 
 use std::collections::HashMap;
 use wayland_client::protocol::{

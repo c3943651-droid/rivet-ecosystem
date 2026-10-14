@@ -1,6 +1,6 @@
-//! App mínima con la fachada: ventana con panel, texto y botón Salir.
+//! Minimal application using the facade: a window with a panel, text and a Quit button.
 //!
-//! Ejecutar en sesión Wayland: `cargo run -p rivet --example hello`.
+//! Run in a Wayland session: `cargo run -p rivet --example hello`.
 
 use rivet::prelude::*;
 

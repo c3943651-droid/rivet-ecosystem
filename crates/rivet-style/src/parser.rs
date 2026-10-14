@@ -1,4 +1,4 @@
-//! Parser descendente del DSL (sobre los tokens del lexer).
+//! Descending parser for the DSL (on top of the lexer's tokens).
 
 use crate::ast::{Node, Prop, StateNode, ThemeNode, Value, WidgetNode};
 use crate::color::Color;

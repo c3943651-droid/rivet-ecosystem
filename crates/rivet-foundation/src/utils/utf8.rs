@@ -1,7 +1,7 @@
-//! Truncado seguro de UTF-8.
+//! Safe UTF-8 truncation.
 //!
-//! Wayland y TrueType entregan cadenas con longitud en bytes, no en
-//! caracteres: este helper corta por límite de código sin romper un `char`.
+//! Wayland and TrueType deliver strings with a length in bytes, not in
+//! characters: this helper cuts at a code point boundary without splitting a `char`.
 
 /// Devuelve el prefijo de `s` que cabe en `max_bytes`, sin partir un `char`.
 ///

@@ -1,4 +1,4 @@
-//! Errores de `rivet-window`.
+//! Errors of `rivet-window`.
 
 use std::fmt;
 

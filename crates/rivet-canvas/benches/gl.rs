@@ -1,6 +1,6 @@
-//! Métricas §14 (RIVET.md): init de contexto EGL, compilación de
-//! shaders y frame time (render + readback 1080p, ruta wl_shm v1) con
-//! 1k/10k/100k rectángulos. Requiere EGL (Mesa); se salta si no hay.
+//! Metrics (RIVET.md §12): EGL context init, shader compilation, and
+//! frame time (render + 1080p readback, v1 wl_shm path) with
+//! 1k/10k/100k rectangles. Requires EGL (Mesa); skipped if absent.
 //!
 //! `cargo bench -p rivet-canvas`
 

@@ -1,8 +1,8 @@
-//! Tablas planas de estilo: la salida del compilador y el camino de
-//! consulta O(1) del render (doc §2/§5).
+//! Flat style tables: the compiler output and the render's O(1) lookup
+//! path (doc §2/§5).
 //!
-//! Cambiar de tema es intercambiar la tabla completa (O(1)); nunca se
-//! recalculan derivados en runtime (ADR-06).
+//! Switching themes swaps the whole table (O(1)); derived values are
+//! never recomputed at runtime (ADR-06).
 
 use crate::color::Color;
 

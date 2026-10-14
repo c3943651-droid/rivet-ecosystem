@@ -1,8 +1,8 @@
-//! Recursos FBO para el blur gaussiano separable (ping-pong).
+//! FBO resources for the separable Gaussian blur (ping-pong).
 //!
-//! `docs/rivet-canvas.md` §3: en v1 no hay compute shaders; el blur se hace
-//! con dos FBO a **media resolución** y dos pases (horizontal + vertical),
-//! que es factible a 60 FPS (a medir, §14).
+//! `docs/rivet-canvas.md` §3: v1 has no compute shaders; the blur is done
+//! with two FBOs at **half resolution** and two passes (horizontal + vertical),
+//! which is feasible at 60 FPS (to be measured, §14).
 
 use glow::HasContext;
 

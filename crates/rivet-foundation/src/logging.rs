@@ -1,8 +1,8 @@
-//! Logging con niveles, canales (stderr + archivo) y gancho de pánico.
+//! Logging with levels, outputs (stderr + file) and a panic hook.
 //!
-//! `docs/rivet-foundation.md` §6: niveles Error/Warn/Info/Debug/Trace,
-//! formato `[NIVEL] [TIMESTAMP] [MÓDULO] [MENSAJE]`. Los macros comprueban
-//! el nivel activo antes de formatear (coste ~0 si está desactivado).
+//! `docs/rivet-foundation.md` §6: Error/Warn/Info/Debug/Trace levels,
+//! `[LEVEL] [TIMESTAMP] [MODULE] [MESSAGE]` format. The macros check the
+//! active level before formatting (~0 cost when disabled).
 
 use std::fs::OpenOptions;
 use std::io::Write;

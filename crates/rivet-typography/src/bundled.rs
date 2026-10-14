@@ -1,10 +1,10 @@
-//! Fuente de respaldo empaquetada (doc §3, ADR-05).
+//! Bundled fallback font (doc §3, ADR-05).
 //!
-//! Garantiza texto legible **sin depender del sistema**: Inter Regular 4.1
-//! empaquetada en el binario vía `include_bytes!`.
+//! Guarantees readable text **without depending on the system**: Inter
+//! Regular 4.1 embedded in the binary via `include_bytes!`.
 //!
-//! Licencia: SIL Open Font License 1.1 — (c) 2016-2024 The Inter Project
-//! Authors. Texto completo embebido en [`BUNDLED_FONT_LICENSE`].
+//! License: SIL Open Font License 1.1 — (c) 2016-2024 The Inter Project
+//! Authors. Full text embedded in [`BUNDLED_FONT_LICENSE`].
 
 /// Bytes de Inter Regular 4.1 (OpenType, ~595 KiB).
 pub static BUNDLED_FONT: &[u8] = include_bytes!("../assets/Inter-Regular.otf");

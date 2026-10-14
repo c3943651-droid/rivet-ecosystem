@@ -1,5 +1,5 @@
-//! `GraphicsContext`: orquesta el frame (preparación → recursos → ordenación
-//! → render → presentación) según `docs/rivet-canvas.md` §2.
+//! `GraphicsContext`: orchestrates the frame (preparation → resources → sorting
+//! → rendering → presentation) per `docs/rivet-canvas.md` §2.
 
 use glow::HasContext;
 

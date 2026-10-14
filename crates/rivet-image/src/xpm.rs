@@ -1,9 +1,9 @@
-//! Decodificador XPM (X Pixmap, formato de texto de los 80).
+//! XPM decoder (X Pixmap, a text format from the 80s).
 //!
-//! Parser a mano: strip de comentarios C, array `{ … }`, cabecera
-//! `<ancho> <alto> <colores> <cpp>`, entradas de color (`c #hex`, `c None`,
-//! `c <nombre>`) y filas de píxeles por código de `cpp` caracteres.
-//! v1 soporta colores hex (`#RGB`/`#RRGGBB`/…), `None` y 16 nombres básicos.
+//! Hand-written parser: C comment stripping, `{ … }` array, header
+//! `<width> <height> <colors> <cpp>`, color entries (`c #hex`, `c None`,
+//! `c <name>`) and pixel rows by code of `cpp` characters.
+//! v1 supports hex colors (`#RGB`/`#RRGGBB`/...), `None` and 16 basic names.
 
 use crate::data::ImageData;
 use crate::error::{ImageError, Result};

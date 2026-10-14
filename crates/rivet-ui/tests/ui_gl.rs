@@ -1,5 +1,5 @@
-//! Tests GPU headless: el pipeline completo de render de UI (layout +
-//! estilos + texto con atlas) sobre un FBO de canvas.
+//! Headless GPU tests: the complete UI render pipeline (layout +
+//! styles + text with atlas) over a canvas FBO.
 
 use rivet_canvas::{GraphicsContext, RenderQueue};
 use rivet_ui::layout::layout_tree;

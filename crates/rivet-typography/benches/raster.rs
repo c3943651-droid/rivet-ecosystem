@@ -1,6 +1,6 @@
-//! Métricas §14 (RIVET.md): rasterizado por glifo a 16/32/64 px y
-//! VRAM estimada por glifo en el atlas (página 512², padding 1 — igual
-//! que rivet-ui).
+//! Metrics (RIVET.md §12): per-glyph rasterization at 16/32/64 px and
+//! estimated VRAM per glyph in the atlas (512² page, padding 1 — same
+//! as rivet-ui).
 //!
 //! `cargo bench -p rivet-typography`
 

@@ -1,5 +1,5 @@
-//! Dibujo: recorre el árbol en orden (pintor) y emite comandos a la cola
-//! de canvas consultando el estilo por (tipo, estado) — todo O(1) por
+//! Drawing: traverses the tree in order (painter) and emits commands to the
+//! canvas queue, looking up the style by (kind, state) — all O(1) per
 //! widget (doc §9).
 
 use rivet_canvas::{Color as CanvasColor, Rect, RenderQueue};

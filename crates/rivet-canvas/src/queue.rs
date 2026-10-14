@@ -1,8 +1,8 @@
-//! Cola de render: comandos ordenables por capa y agrupados por estado.
+//! Render queue: commands sortable by layer and grouped by state.
 //!
-//! `docs/rivet-canvas.md` §2-3: la cola se agrupa por (capa, shader, textura)
-//! al encolar para minimizar cambios de estado (`glBind*`, *state thrashing*);
-//! el renderer ordena los lotes por capa.
+//! `docs/rivet-canvas.md` §2-3: the queue is grouped by (layer, shader, texture)
+//! at enqueue time to minimize state changes (`glBind*`, *state thrashing*);
+//! the renderer sorts batches by layer.
 
 use crate::color::Color;
 use crate::geometry::{push_quad, Rect, Transform};

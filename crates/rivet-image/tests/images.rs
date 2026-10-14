@@ -1,5 +1,5 @@
-//! Tests de integración: decodificadores reales (PNG/JPEG/WebP), SVG,
-//! iconos del tema del sistema y fallback *missing*.
+//! Integration tests: real decoders (PNG/JPEG/WebP), SVG, system icon
+//! themes, and the *missing* fallback.
 
 use std::io::Cursor;
 

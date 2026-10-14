@@ -1,7 +1,7 @@
-//! Helpers de endianness para protocolos binarios (Wayland, TrueType).
+//! Endianness helpers for binary protocols (Wayland, TrueType).
 //!
-//! Ambos protocolos serializan en little-endian; estos helpers leen y
-//! escriben valores desde buffers sin copiar ni depender de la arquitectura.
+//! Both protocols serialize in little-endian; these helpers read and
+//! write values from buffers without copying or depending on the architecture.
 
 /// Lee un `u16` little-endian en `buf[off..off+2]`.
 ///

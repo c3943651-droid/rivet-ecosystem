@@ -1,6 +1,6 @@
-//! Texto en GPU: typography (fuente+layout+raster) → atlas → textura de
-//! canvas. El primer uso de un glifo lo rastreriza y sube su región
-//! (incremental); a partir de ahí todo es indexado (doc §6 de typography).
+//! Text on the GPU: typography (font+layout+raster) → atlas → canvas
+//! texture. The first use of a glyph rasterizes and uploads its region
+//! (incremental); from then on everything is indexed (doc §6 of typography).
 
 /// Destino de dibujo de texto: contexto GL + cola del frame.
 pub struct DrawTarget<'a> {

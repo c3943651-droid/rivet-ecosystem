@@ -1,8 +1,8 @@
-//! Resolución de iconos por nombre según el tema freedesktop (doc §4).
+//! Icon resolution by name according to the freedesktop theme (doc §4).
 //!
-//! Búsqueda: tema pedido → cadena `Inherits` (hicolor al final) →
-//! `/usr/share/pixmaps` → icono *missing* generado (fallback empaquetado
-//! equivalente, sin depender de archivos del sistema).
+//! Lookup order: requested theme -> `Inherits` chain (hicolor last) ->
+//! `/usr/share/pixmaps` -> generated *missing* icon (equivalent packaged
+//! fallback, without depending on system files).
 
 use std::path::PathBuf;
 

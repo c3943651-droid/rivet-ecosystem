@@ -1,4 +1,4 @@
-//! Errores de `rivet-style`.
+//! Errors of `rivet-style`.
 
 use std::fmt;
 

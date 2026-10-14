@@ -1,15 +1,15 @@
-//! Bucle de eventos sobre `epoll` (Linux).
+//! Event loop on top of `epoll` (Linux).
 //!
-//! `docs/rivet-foundation.md` §4: `epoll` *level-triggered*, temporizadores
-//! vía `timerfd`, señales vía `signalfd` (bloqueadas con `sigprocmask`),
-//! despacho por lotes en el hilo que ejecuta [`EventLoop::run`]. En reposo el
-//! proceso queda bloqueado en `epoll_wait` (consumo tendente a ~0; objetivo a
-//! medir, no prometido).
+//! `docs/rivet-foundation.md` §4: level-triggered `epoll`, timers
+//! via `timerfd`, signals via `signalfd` (blocked with `sigprocmask`),
+//! batch dispatch on the thread running [`EventLoop::run`]. When idle the
+//! process blocks in `epoll_wait` (consumption tending to ~0; a goal to be
+//! measured, not promised).
 //!
-//! `post_event` despierta el bucle con un `eventfd` interno.
+//! `post_event` wakes the loop with an internal `eventfd`.
 //!
-//! Este tipo usa `Rc`/`RefCell` para los manejadores: **no es `Send`**; el
-//! bucle vive en un único hilo (v1).
+//! This type uses `Rc`/`RefCell` for handlers: **it is not `Send`**; the
+//! loop lives on a single thread (v1).
 
 use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};

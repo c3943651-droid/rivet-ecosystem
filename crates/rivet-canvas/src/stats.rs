@@ -1,7 +1,7 @@
-//! Telemetría por frame (`docs/rivet-canvas.md` §8).
+//! Per-frame telemetry (`docs/rivet-canvas.md` §8).
 //!
-//! Base del protocolo de medición (`RIVET.md` §14): los valores son
-//! **mediciones del frame**, no promesas.
+//! Basis of the measurement protocol (`RIVET.md` §14): the values are
+//! **frame measurements**, not promises.
 
 use std::time::{Duration, Instant};
 
