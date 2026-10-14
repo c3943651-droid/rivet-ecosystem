@@ -3,20 +3,20 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/c3943651-droid/rivet-ecosystem"
 rust-version = "1.75"
 
 [workspace.dependencies]
-rivet-base = { path = "crates/rivet-base", version = "0.1.0" }
-rivet-window = { path = "crates/rivet-window", version = "0.1.0" }
-rivet-canvas = { path = "crates/rivet-canvas", version = "0.1.0" }
-rivet-typography = { path = "crates/rivet-typography", version = "0.1.0" }
-rivet-image = { path = "crates/rivet-image", version = "0.1.0" }
-rivet-style = { path = "crates/rivet-style", version = "0.1.0" }
-rivet-ui = { path = "crates/rivet-ui", version = "0.1.0" }
+rivet-base = { path = "crates/rivet-base", version = "0.1.1" }
+rivet-window = { path = "crates/rivet-window", version = "0.1.1" }
+rivet-canvas = { path = "crates/rivet-canvas", version = "0.1.1" }
+rivet-typography = { path = "crates/rivet-typography", version = "0.1.1" }
+rivet-image = { path = "crates/rivet-image", version = "0.1.1" }
+rivet-style = { path = "crates/rivet-style", version = "0.1.1" }
+rivet-ui = { path = "crates/rivet-ui", version = "0.1.1" }
 criterion = "0.5"
 
 [profile.release]
