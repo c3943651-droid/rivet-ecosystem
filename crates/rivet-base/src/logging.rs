@@ -1,6 +1,6 @@
 //! Logging with levels, outputs (stderr + file) and a panic hook.
 //!
-//! `docs/rivet-foundation.md` §6: Error/Warn/Info/Debug/Trace levels,
+//! `docs/rivet-base.md` §6: Error/Warn/Info/Debug/Trace levels,
 //! `[LEVEL] [TIMESTAMP] [MODULE] [MESSAGE]` format. The macros check the
 //! active level before formatting (~0 cost when disabled).
 

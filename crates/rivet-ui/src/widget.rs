@@ -7,7 +7,7 @@
 use rivet_canvas::Rect;
 
 /// Identificador de widget: 32 bits índice + 32 bits generación
-/// (coherente con `rivet-foundation`, doc §4).
+/// (coherente con `rivet-base`, doc §4).
 pub type WidgetId = u64;
 
 /// Bits de estado de un widget (doc §6).

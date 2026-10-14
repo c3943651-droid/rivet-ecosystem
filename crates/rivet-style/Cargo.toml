@@ -10,7 +10,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-rivet-foundation.workspace = true
+rivet-base.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

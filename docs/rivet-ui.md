@@ -5,7 +5,7 @@
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Layer:** 4 (highest level of the toolkit)
-- **Depends on:** `rivet-foundation`, `rivet-canvas`, `rivet-typography`, `rivet-style`, `rivet-image`, `rivet-window` (events).
+- **Depends on:** `rivet-base`, `rivet-canvas`, `rivet-typography`, `rivet-style`, `rivet-image`, `rivet-window` (events).
 - **Umbrella document:** `../RIVET.md`
 
 ---
@@ -50,7 +50,7 @@ struct ButtonSlab { entries: Vec<Entry<ButtonData>> }
 
 ## 4. Identity
 
-- **`WidgetId` = 64 bits:** 32-bit index + 32-bit generation (consistent with `rivet-foundation`).
+- **`WidgetId` = 64 bits:** 32-bit index + 32-bit generation (consistent with `rivet-base`).
 - Access is by ID validated against the generation → detects *use-after-free*.
 
 ## 5. Components

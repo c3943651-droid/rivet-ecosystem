@@ -5,7 +5,7 @@ Rivet's **GPU-accelerated 2D graphics rendering** subsystem.
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Layer:** 3 (rendering)
-- **Depends on:** `rivet-foundation` (and `rivet-typography`, `rivet-image` as texture sources). **Does NOT depend on `rivet-window`.**
+- **Depends on:** `rivet-base` (and `rivet-typography`, `rivet-image` as texture sources). **Does NOT depend on `rivet-window`.**
 - **Consumed by:** `rivet-ui`
 - **Umbrella document:** `../RIVET.md`
 

@@ -10,7 +10,7 @@ repository = "https://github.com/c3943651-droid/rivet-ecosystem"
 rust-version = "1.75"
 
 [workspace.dependencies]
-rivet-foundation = { path = "crates/rivet-foundation", version = "0.1.0" }
+rivet-base = { path = "crates/rivet-base", version = "0.1.0" }
 rivet-window = { path = "crates/rivet-window", version = "0.1.0" }
 rivet-canvas = { path = "crates/rivet-canvas", version = "0.1.0" }
 rivet-typography = { path = "crates/rivet-typography", version = "0.1.0" }

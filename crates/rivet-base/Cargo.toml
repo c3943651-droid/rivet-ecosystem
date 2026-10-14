@@ -1,6 +1,6 @@
 [package]
-name = "rivet-foundation"
-description = "Rivet core: generational slab, epoll event loop, TOML config, and utilities."
+name = "rivet-base"
+description = "Rivet toolkit core: generational slab, epoll event loop, TOML config, and utilities."
 keywords = ["slab", "event-loop", "epoll", "arena"]
 categories = ["os::linux-apis"]
 version.workspace = true

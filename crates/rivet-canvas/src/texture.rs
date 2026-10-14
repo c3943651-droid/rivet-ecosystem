@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use glow::HasContext;
 
-use rivet_foundation::slab::Slab;
+use rivet_base::slab::Slab;
 
 use crate::error::{CanvasError, Result};
 
@@ -41,7 +41,7 @@ pub trait TextureSource {
 
 /// Almacén de texturas vivas del contexto gráfico.
 ///
-/// Usa el slab con generaciones de `rivet-foundation`: un `TextureId` de una
+/// Usa el slab con generaciones de `rivet-base`: un `TextureId` de una
 /// textura eliminada nunca apunta a una nueva por accidente.
 pub struct TextureManager {
     slab: Slab<TextureEntry>,

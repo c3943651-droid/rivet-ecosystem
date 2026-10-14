@@ -2,7 +2,7 @@
 //!
 //! Manages `wl_registry`, `xdg_shell` (toplevels), input (`wl_seat` +
 //! `libxkbcommon`), `wl_shm` buffers (memfd + mmap) and frame callbacks,
-//! integrated with the `epoll` event loop of `rivet-foundation`.
+//! integrated with the `epoll` event loop of `rivet-base`.
 //!
 //! It does **not** render: it hands the surface/buffer to `rivet-canvas` (canvas does
 //! not depend on window — a fixed boundary of the ecosystem).

@@ -1,6 +1,6 @@
-# rivet-foundation — Definitive documentation
+# rivet-base — Definitive documentation
 
-> Part of the **Rivet** ecosystem. The overall vision, principles, architecture decisions (ADRs), and the measurement policy are in **`../RIVET.md`** (umbrella document, root authority). This document is the **definitive specification** of the subsystem and supersedes all previous documentation of `rivet-foundation`.
+> Part of the **Rivet** ecosystem. The overall vision, principles, architecture decisions (ADRs), and the measurement policy are in **`../RIVET.md`** (umbrella document, root authority). This document is the **definitive specification** of the subsystem and supersedes all previous documentation of `rivet-base`.
 
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
@@ -10,7 +10,7 @@
 
 ## 1. Purpose
 
-`rivet-foundation` is the base on which all other crates are built. It provides three things:
+`rivet-base` is the base on which all other crates are built. It provides three things:
 
 1. **Memory:** a generational *slab allocator*; the ecosystem's object store.
 2. **Events:** an event loop over `epoll` (timers, signals, I/O) that keeps the process **blocked** while idle.
@@ -113,7 +113,7 @@ pub struct Context {
 - **Explicit dependency injection** (no singletons): each crate receives `&Context`/`&mut Context`.
 - Typical flow: build context → load config → register modules from the other crates → `event_loop.run()`.
 
-**Dependency order** (who uses whom): the whole ecosystem depends on `rivet-foundation`; `rivet-foundation` depends on nothing in the ecosystem.
+**Dependency order** (who uses whom): the whole ecosystem depends on `rivet-base`; `rivet-base` depends on nothing in the ecosystem.
 
 ## 9. Dependencies
 

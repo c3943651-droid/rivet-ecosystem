@@ -33,7 +33,7 @@ struct GlBackend {
 /// app.run()?;
 /// ```
 pub struct Application {
-    event_loop: rivet_foundation::event_loop::EventLoop,
+    event_loop: rivet_base::event_loop::EventLoop,
     wayland: Wayland,
     window: Window,
     gl: GraphicsContext,
@@ -54,7 +54,7 @@ impl Application {
     /// Crea la app: conecta Wayland, abre la ventana y prepara GL.
     pub fn new(title: impl Into<String>, width: u32, height: u32) -> Result<Self> {
         let mut wayland = Wayland::connect().map_err(|e| UiError::Subsystem(e.to_string()))?;
-        let mut event_loop = rivet_foundation::event_loop::EventLoop::new(None, 64)
+        let mut event_loop = rivet_base::event_loop::EventLoop::new(None, 64)
             .map_err(|e| UiError::Subsystem(e.to_string()))?;
         let window = wayland
             .create_window(WindowOptions::new(width.max(1), height.max(1)).title(title))

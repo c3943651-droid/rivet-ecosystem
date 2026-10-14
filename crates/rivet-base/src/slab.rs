@@ -1,6 +1,6 @@
 //! Slab allocator with generations and 64-bit IDs.
 //!
-//! Object store of the ecosystem (`docs/rivet-foundation.md` §3):
+//! Object store of the ecosystem (`docs/rivet-base.md` §3):
 //! flat contiguous memory, O(1) access by index, LIFO reuse of
 //! slots via `free_list` and stale-ID invalidation by generation.
 

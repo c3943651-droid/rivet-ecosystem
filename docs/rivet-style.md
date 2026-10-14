@@ -5,7 +5,7 @@
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Layer:** 3 (presentation)
-- **Depends on:** `rivet-foundation`; consumed by `rivet-ui` / `rivet-canvas`.
+- **Depends on:** `rivet-base`; consumed by `rivet-ui` / `rivet-canvas`.
 - **Umbrella document:** `../RIVET.md`
 
 ---

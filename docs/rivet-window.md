@@ -5,7 +5,7 @@
 - **Version:** 2.0 (definitive)
 - **Date:** 2026-10-11
 - **Layer:** 2 (communication with the window system)
-- **Depends on:** `rivet-foundation`
+- **Depends on:** `rivet-base`
 - **Consumed by:** `rivet-canvas`, `rivet-ui`
 - **Umbrella document:** `../RIVET.md`
 
@@ -37,7 +37,7 @@ Separation rule (ADR in `../RIVET.md`): **`rivet-window` hands surface/buffer to
 2. `wl_display_roundtrip` to enumerate globals.
 3. Acquire **bindings** (`wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`, `zxdg_output_manager_v1`, `zwp_layer_shell_v1`, `wp_viewporter`, `zwp_linux_dmabuf_v1` if present).
 4. Check the minimum version of each interface; degrade gracefully if an optional one is missing (e.g. without `xdg_wm_base` there are no toplevels).
-5. Integrate the Wayland fd into the `epoll` event loop of `rivet-foundation`.
+5. Integrate the Wayland fd into the `epoll` event loop of `rivet-base`.
 
 ## 4. Surface role
 
