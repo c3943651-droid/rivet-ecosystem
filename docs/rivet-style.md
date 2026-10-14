@@ -1,27 +1,27 @@
-# rivet-style — Documentación definitiva
+# rivet-style — Definitive documentation
 
-Subsistema de **estilos y temas** de Rivet.
+**Styles and themes** subsystem of Rivet.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Capa:** 3 (presentación)
-- **Depende de:** `rivet-foundation`; consumido por `rivet-ui` / `rivet-canvas`.
-- **Reemplaza a:** CSS de GTK (GTK3 `GtkStyleContext` / GTK4 CSS).
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Layer:** 3 (presentation)
+- **Depends on:** `rivet-foundation`; consumed by `rivet-ui` / `rivet-canvas`.
+- **Replaces:** GTK CSS (GTK3 `GtkStyleContext` / GTK4 CSS).
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-Separar **apariencia** de **lógica de widget**. Define un lenguaje de estilos propio (DSL) legible y **precompilado a tablas planas** que los widgets consultan en tiempo de render. Sin parseo de CSS en runtime, sin cascada costosa, sin selectores complejos.
+Separate **appearance** from **widget logic**. Defines a purpose-built style language (DSL), readable and **precompiled into flat tables** that widgets query at render time. No runtime CSS parsing, no expensive cascade, no complex selectors.
 
-## 2. Modelo
+## 2. Model
 
-- **DSL `.rivet-style`** (texto) → **compilador** → **tablas planas** (arrays de structs) indexadas por (tipo de widget, estado).
-- En tiempo de ejecución, el widget solo **indexa** su estilo: **O(1)**.
-- **Colores derivados por tema** (ADR-06): `lighten`/`darken`/`alpha`/`mix` se **calculan en tiempo de compilación del tema**, no por frame. El cambio de tema produce tablas precomputadas; intercambiar tema es **O(1)** (swap de tabla).
+- **DSL `.rivet-style`** (text) → **compiler** → **flat tables** (arrays of structs) indexed by (widget kind, state).
+- At runtime, the widget only **indexes** its style: **O(1)**.
+- **Theme-derived colors** (ADR-06): `lighten`/`darken`/`alpha`/`mix` are **computed at theme compilation time**, not per frame. A theme change produces precomputed tables; switching themes is **O(1)** (table swap).
 
-## 3. DSL (ejemplo)
+## 3. DSL (example)
 
 ```
 widget button {
@@ -42,22 +42,22 @@ theme dark {
 }
 ```
 
-## 4. Componentes
+## 4. Components
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 |---|---|
-| `lexer` / `parser` | Tokenizar y parsear el DSL. |
-| `ast` | Representación intermedia. |
-| `theme` | Resolución de variables de tema y **derivación de color**. |
-| `compiler` | AST → tablas planas; validación. |
-| `tables` | Estructuras `StyleTable`/`WidgetStyle` (indexables). |
-| `runtime` | Consulta por (widget, estado); transiciones. |
+| `lexer` / `parser` | Tokenize and parse the DSL. |
+| `ast` | Intermediate representation. |
+| `theme` | Theme variable resolution and **color derivation**. |
+| `compiler` | AST → flat tables; validation. |
+| `tables` | `StyleTable`/`WidgetStyle` structures (indexable). |
+| `runtime` | Query by (widget, state); transitions. |
 | `error` | `StyleError`. |
 
-## 5. Tablas y consulta
+## 5. Tables and lookup
 
 ```rust
-pub struct StyleTable { /* arrays planos por tipo */ }
+pub struct StyleTable { /* flat arrays per kind */ }
 pub struct WidgetStyle {
     pub background: Color, pub foreground: Color,
     pub border: Border, pub padding: Insets, pub font_size: f32, /* ... */
@@ -67,39 +67,39 @@ pub enum WidgetState { Normal, Hover, Active, Disabled, Focused }
 impl StyleTable { pub fn get(&self, kind: WidgetKind, state: WidgetState) -> &WidgetStyle; }
 ```
 
-## 6. Estados y transiciones
+## 6. States and transitions
 
-- Estados como **bitset**; el widget resuelve estado y consulta su fila.
-- **Transiciones** declarativas (p. ej. `background 150ms ease`); animación interpolada por el motor de canvas, no por árbol de estilos.
-- Prioridad de estados documentada (Disabled > Active > Focused > Hover > Normal) para evitar ambigüedad.
+- States as a **bitset**; the widget resolves its state and queries its row.
+- Declarative **transitions** (e.g. `background 150ms ease`); the interpolated animation runs in the canvas engine, not in the style tree.
+- State priority is documented (Disabled > Active > Focused > Hover > Normal) to avoid ambiguity.
 
-## 7. Temas
+## 7. Themes
 
-- Un tema define colores base, escala tipográfica y radios.
-- **Cambio de tema = swap de `StyleTable`** (O(1)).
-- Tema claro/oscuro y variantes; sin recalcular derivados en runtime.
+- A theme defines base colors, typographic scale, and radii.
+- **Theme change = `StyleTable` swap** (O(1)).
+- Light/dark themes and variants; no derived color recomputation at runtime.
 
-## 8. Dependencias
+## 8. Dependencies
 
-- **Rust puro:** parser propio, utilidades de color (`palette`/propio).
-- **C de sistema:** ninguno en runtime de estilos.
+- **Pure Rust:** own parser, color utilities (`palette`/in-house).
+- **System C:** none in the styles runtime.
 
-## 9. Alcance
+## 9. Scope
 
-**v1:** DSL, compilador a tablas, estados + transiciones, temas claro/oscuro, derivación de color en compilación.
+**v1:** DSL, compiler to tables, states + transitions, light/dark themes, color derivation at compile time.
 
-**v1.x/v2:** herencia de estilos, selectores por clase, `@media`/`prefers-color-scheme`, carga de estilo externo en runtime (hot-reload), animaciones por keyframes.
+**v1.x/v2:** style inheritance, class selectors, `@media`/`prefers-color-scheme`, external style loading at runtime (hot-reload), keyframe animations.
 
-## 10. Decisiones y correcciones aplicadas
+## 10. Decisions and applied corrections
 
-- **Colores derivados por tema en codegen** (ADR-06): no hay coste por frame.
-- Se retira cualquier afirmación de "0% de CPU" en el cambio de tema: la afirmación válida es que el cambio es **O(1)** (swap de tabla).
-- Modelo **flat-table** en lugar de cascada CSS.
+- **Theme-derived colors in codegen** (ADR-06): no per-frame cost.
+- Any claim of "0% CPU" on theme change is withdrawn: the valid claim is that the change is **O(1)** (table swap).
+- **Flat-table** model instead of a CSS cascade.
 
-## 11. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 11. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-Tamaño de las tablas en RAM, ns por consulta de estilo, µs de compilación del DSL, tiempo de swap de tema. Método: `criterion` + `heaptrack`.
+Table size in RAM, ns per style lookup, µs of DSL compilation, theme swap time. Method: `criterion` + `heaptrack`.
 
-## 12. Ideas preservadas (del diseño previo)
+## 12. Preserved ideas (from the previous design)
 
-Separación estricta apariencia/lógica · estilos como datos indexables · O(1) en el camino caliente del render · compilación en lugar de interpretación en runtime.
+Strict appearance/logic separation · styles as indexable data · O(1) on the render hot path · compilation instead of runtime interpretation.

@@ -1,532 +1,676 @@
-# RIVET — Documentación Oficial
+# RIVET — Official Documentation
 
-> **Este es el único documento oficial de Rivet.** Todo lo demás (carpeta `Rivet Documentacion/archivo/`, `Wrappers-Legacy-prerivet/`) es **histórico** y no debe tomarse como especificación. Si algo en el archivo contradice este documento, **manda este documento**.
+> **This is the only official Rivet document.** Everything else (the
+> `Rivet Documentacion/archivo/` folder, `Wrappers-Legacy-prerivet/`) is
+> **historical** and must not be taken as a specification. If anything in
+> the archive contradicts this document, **this document prevails**.
 
-- **Versión:** 2.0 (integrada)
-- **Fecha:** 2026-10-11
-- **Estado:** Documento único y autoritativo. Integra la visión, la arquitectura, las decisiones cerradas, las especificaciones por subsistema, la hoja de ruta y el registro de malentendidos resueltos.
-- **Licencia del proyecto:** MIT OR Apache-2.0.
-
----
-
-## Índice
-
-1. [Qué es Rivet](#1-qué-es-rivet)
-2. [Historia (por qué existe)](#2-historia-por-qué-existe)
-3. [Identidad y posicionamiento](#3-identidad-y-posicionamiento)
-4. [Principios](#4-principios)
-5. [Mapa de crates](#5-mapa-de-crates)
-6. [Política de dependencias](#6-política-de-dependencias)
-7. [Modelo de memoria y objetos](#7-modelo-de-memoria-y-objetos)
-8. [Entrada y teclado](#8-entrada-y-teclado)
-9. [Subsistema gráfico](#9-subsistema-gráfico-especificación-corregida)
-10. [Decisiones de Arquitectura (ADR)](#10-decisiones-de-arquitectura-adr)
-11. [Especificaciones por subsistema](#11-especificaciones-por-subsistema)
-12. [Alcance v1](#12-alcance-v1)
-13. [Hoja de ruta](#13-hoja-de-ruta)
-14. [Métricas y medición](#14-métricas-y-medición)
-15. [Registro de malentendidos resueltos](#15-registro-de-malentendidos-resueltos)
-16. [Relación con la documentación histórica](#16-relación-con-la-documentación-histórica)
-17. [Estado del proyecto](#17-estado-del-proyecto)
+- **Version:** 2.1 (English migration; project status updated)
+- **Date:** 2026-10-13
+- **Status:** Single, authoritative document. Integrates the vision, the
+  architecture, closed decisions, per-subsystem specifications, the
+  roadmap, and the design log of resolved misconceptions.
+- **Project license:** MIT OR Apache-2.0.
 
 ---
 
-## 1. Qué es Rivet
+## Index
 
-Rivet es un **conjunto de librerías escritas en Rust para crear software gráfico (GUI)**, en el mismo rol que GTK y Qt: desarrolladores lo usan para construir programas, aplicaciones, herramientas y componentes.
-
-**No** es un escritorio, ni un gestor de ventanas, ni un entorno de escritorio. Rivet es **el toolkit**: las librerías sobre las que se construye software.
-
-## 2. Historia (por qué existe)
-
-El proyecto pasó por tres fases de identidad; conviene conocerlas para no repetir errores:
-
-1. **"Wrappers"** — idea inicial de envoltorios. Nombre confuso: sugería FFI sobre C cuando el objetivo era reescribir en Rust.
-2. **"Zero" (legacy)** — giro al "Constructor Total". Nombre más claro, pero objetivos de memoria cada vez más extremos (<100 MB → 25-35 MB) **sin mediciones**.
-3. **Rivet (actual)** — unificación. Un solo nombre, un solo ecosistema, criterio de **métricas medidas, no prometidas**.
-
-## 3. Identidad y posicionamiento
-
-- **Qué es:** librerías GUI en Rust (rol GTK/Qt).
-- **Qué NO es:** un escritorio, un DE, un drop-in 1:1 de GTK/Qt, ni "el GTK nuevo".
-- **Diferencial:** Rust 100% nativo (sin puentes C de GUI), cohesión entre crates y huella mínima por diseño.
-- **Rampa de entrada (no el techo):** componentes de escritorio ligeros (lanzadores, paneles, overlays, mascotas virtuales, utilidades).
-- **Horizonte:** un toolkit general con el que se construyan programas como editores de texto, herramientas creativas y aplicaciones completas.
-
-## 4. Principios
-
-1. **Rust nativo, sin C de GUI.** No hay GTK, Qt, Cairo, Pango ni FreeType en el stack. Se admite "C de sistema" mínimo y acotado (§6).
-2. **Una responsabilidad por crate.** Cada crate hace una cosa; el resto es composición.
-3. **Medido, no prometido.** Ninguna cifra de memoria/CPU/latencia se publica como dato hasta que exista una medición real sobre un componente real (§14).
-4. **Componente primero.** Las crates se priorizan por sus dependencias entre sí y el valor de cada componente (§12).
-5. **Cohesión sobre cantidad.** Mejor 6 crates coherentes que 12 superpuestas.
-6. **Componer, no heredar.** Widgets por composición; jerarquía por IDs con generación, no por herencia ni punteros.
-7. **Open source.** MIT OR Apache-2.0, público para que otros construyan con él y lo mejoren.
+1. [What Rivet is](#1-what-rivet-is)
+2. [History (why it exists)](#2-history-why-it-exists)
+3. [Identity and positioning](#3-identity-and-positioning)
+4. [Principles](#4-principles)
+5. [Crate map](#5-crate-map)
+6. [Dependency policy](#6-dependency-policy)
+7. [Memory and object model](#7-memory-and-object-model)
+8. [Input and keyboard](#8-input-and-keyboard)
+9. [Graphics subsystem](#9-graphics-subsystem-corrected-specification)
+10. [Architecture Decision Records (ADR)](#10-architecture-decision-records-adr)
+11. [Per-subsystem specifications](#11-per-subsystem-specifications)
+12. [v1 scope](#12-v1-scope)
+13. [Roadmap](#13-roadmap)
+14. [Metrics and measurement](#14-metrics-and-measurement)
+15. [Design log: resolved misconceptions](#15-design-log-resolved-misconceptions)
+16. [Relation to the historical documentation](#16-relation-to-the-historical-documentation)
+17. [Project status](#17-project-status)
 
 ---
 
-## 5. Mapa de crates
+## 1. What Rivet is
 
-| Crate | Responsabilidad | Reemplaza a (stack clásico) |
+Rivet is a **set of Rust libraries for building graphical (GUI) software**,
+in the same role as GTK and Qt: developers use it to build programs,
+applications, tools, and components.
+
+It is **not** a desktop, a window manager, or a desktop environment. Rivet
+is **the toolkit**: the libraries on which software is built.
+
+## 2. History (why it exists)
+
+The project went through three identity phases; they are recorded here to
+avoid repeating the same mistakes:
+
+1. **"Wrappers"** — initial wrapper idea. The name was confusing: it
+   suggested FFI over C when the goal was a rewrite in Rust.
+2. **"Zero" (legacy)** — pivot to a "total constructor". A clearer name,
+   but memory targets grew increasingly extreme (<100 MB → 25-35 MB)
+   **without measurements**.
+3. **Rivet (current)** — unification. One name, one ecosystem, and the
+   criterion of **measured, not promised** metrics.
+
+## 3. Identity and positioning
+
+- **What it is:** GUI libraries in Rust (the GTK/Qt role).
+- **What it is not:** a desktop, a DE, a 1:1 drop-in replacement for
+  GTK/Qt, or "the new GTK".
+- **Distinguishing trait:** fully native Rust (no C GUI bridges),
+  cohesion between crates, and a minimal footprint by design.
+- **Entry point (not the ceiling):** lightweight desktop components
+  (launchers, panels, overlays, desk pets, utilities).
+- **Horizon:** a general toolkit for building programs such as text
+  editors, creative tools, and full applications.
+
+## 4. Principles
+
+1. **Native Rust, no GUI C.** No GTK, Qt, Cairo, Pango, or FreeType in the
+   stack. Minimal, bounded "system C" is allowed (§6).
+2. **One responsibility per crate.** Each crate does one thing; everything
+   else is composition.
+3. **Measured, not promised.** No memory/CPU/latency figure is published
+   as data until a real measurement exists on a real component (§14).
+4. **Component first.** Crates are prioritized by their interdependencies
+   and the value of each component (§12).
+5. **Cohesion over quantity.** Six coherent crates are better than twelve
+   overlapping ones.
+6. **Compose, don't inherit.** Widgets by composition; hierarchy through
+   IDs with generations, not inheritance or pointers.
+7. **Open source.** MIT OR Apache-2.0, public so others can build on it
+   and improve it.
+
+---
+
+## 5. Crate map
+
+| Crate | Responsibility | Replaces (classic stack) |
 |---|---|---|
-| `rivet-foundation` | Slab con generaciones, bucle de eventos (epoll), config TOML, errores, utilidades | GLib + parte de GObject |
-| `rivet-window` | Cliente Wayland: socket, `wl_registry`, `xdg_shell`, `layer_shell`, popups, subsurfaces, entrada, buffers, HiDPI | GDK (backend Wayland) + `libwayland-client` |
-| `rivet-canvas` | Render 2D por GPU (OpenGL 3.3 Core + EGL), shaders, geometría, texturas, efectos | Cairo + GSK + cargador GL/EGL |
-| `rivet-typography` | Parseo TTF/OTF, rasterizado (De Casteljau + scanline), caché de glifos, métricas | FreeType + parte de Pango |
-| `rivet-image` | Carga/decodificación de imágenes (PNG/JPEG/SVG/WebP), iconos y temas de iconos | libpng/libjpeg/librsvg + `image` |
-| `rivet-style` | Estilos precompilados en tablas planas, estados, paletas/temas | Motor CSS de GTK / QSS |
-| `rivet-ui` | Widgets por composición, layout, eventos, foco | GTK (widgets + layout) |
-| `rivet` | Fachada que re-exporta el ecosistema | El "paraguas" tipo GTK |
+| `rivet-foundation` | Generational slab, epoll event loop, TOML config, errors, utilities | GLib + part of GObject |
+| `rivet-window` | Wayland client: socket, `wl_registry`, `xdg_shell`, `layer_shell`, popups, subsurfaces, input, buffers, HiDPI | GDK (Wayland backend) + `libwayland-client` |
+| `rivet-canvas` | GPU 2D rendering (OpenGL 3.3 Core + EGL), shaders, geometry, textures, effects | Cairo + GSK + GL/EGL loader |
+| `rivet-typography` | TTF/OTF parsing, rasterization (De Casteljau + scanline), glyph cache, metrics | FreeType + part of Pango |
+| `rivet-image` | Image loading/decoding (PNG/JPEG/SVG/WebP), icons and icon themes | libpng/libjpeg/librsvg + `image` |
+| `rivet-style` | Precompiled styles in flat tables, states, palettes/themes | GTK CSS engine / QSS |
+| `rivet-ui` | Widgets by composition, layout, events, focus | GTK (widgets + layout) |
+| `rivet` | Facade re-exporting the ecosystem | The `#include <gtk/gtk.h>` umbrella |
 
-> `rivet-image` es un crate **propio y necesario** del toolkit (iconos e imágenes), no opcional.
+> `rivet-image` is a **required crate of the toolkit** (icons and images),
+> not an optional one.
 
 ```
-Rivet (toolkit GUI en Rust)
-└── Crates (librerías)  →  foundation · window · canvas · typography · image · style · ui · rivet (fachada)
+Rivet (GUI toolkit in Rust)
+└── Crates (libraries) → foundation · window · canvas · typography · image · style · ui · rivet (facade)
 ```
 
 ---
 
-## 6. Política de dependencias
+## 6. Dependency policy
 
-La meta **no** es "cero C a cualquier coste", sino **cero C en la capa GUI** y C mínimo, acotado y justificado en la capa de sistema.
+The goal is **not** "zero C at any cost", but **zero C in the GUI layer**,
+with minimal, bounded, justified system C.
 
-**Prohibido:** GTK, Qt, GLib, Cairo, Pango, FreeType, HarfBuzz (C) y sus puentes; `wgpu`, `smithay`, `fontdue` (no por malos, sino por la meta de control propio de la pila).
+**Forbidden:** GTK, Qt, GLib, Cairo, Pango, FreeType, HarfBuzz (C) and
+their bridges; `wgpu`, `smithay`, `fontdue` (not because they are bad, but
+because of the goal of owning the stack).
 
-**Permitido — C de sistema (allowlist):**
+**Allowed — system C (allowlist):**
 
-| Dependencia | Motivo | Nota |
+| Dependency | Reason | Note |
 |---|---|---|
-| `libc` | ABI del sistema | Mínimo |
-| Driver OpenGL/EGL (`libEGL`/`libGL`) | Acceso a GPU | Sistema; siempre presente |
-| `libxkbcommon` | Mapa de teclado / xkb | Único C no evitable hoy |
+| `libc` | System ABI | Minimal |
+| OpenGL/EGL driver (`libEGL`/`libGL`) | GPU access | System-provided; always present |
+| `libxkbcommon` | Keyboard map / xkb | The only unavoidable C today |
 
-**Permitido — crates de Rust puro (según aporte):** `serde`/`toml` (config), `zbus` (D-Bus, puro Rust), `fontdb` (fuentes del sistema, sin `fontconfig`), `ttf-parser`, y similares **Rust puro**.
+**Allowed — pure-Rust crates (by contribution):** `serde`/`toml` (config),
+`zbus` (D-Bus, pure Rust), `fontdb` (system fonts, no `fontconfig`),
+`ttf-parser`, and similar **pure-Rust** crates.
 
-**Regla práctica:**
-> Si existe una pieza en **Rust puro** que resuelve el problema, se usa hasta que una crate propia de Rivet la justifique. El **C de GUI** se prohíbe; el **C de sistema** se limita a la allowlist.
+**Practical rule:**
+> If a **pure-Rust** crate solves the problem, it is used until a Rivet
+> crate of its own is justified. **GUI C** is forbidden; **system C** is
+> limited to the allowlist.
 
 ---
 
-## 7. Modelo de memoria y objetos
+## 7. Memory and object model
 
-### 7.1. Slab con generaciones
-- IDs de **64 bits** = 32 de índice + 32 de generación. Referencias seguras ante liberación (evita *use-after-free* silencioso por índices reutilizados). **Decisión cerrada.**
+### 7.1. Generational slab
+- **64-bit** IDs = 32 bits of index + 32 bits of generation. Safe against
+  freed handles (prevents silent use-after-free through recycled indices).
+  **Closed decision.**
 
-### 7.2. Almacenamiento de widgets (decisión cerrada)
-Modelo de **dos niveles**:
-1. **Nodo común** en un arena plano: `Slab<WidgetNode>`, cabecera pequeña de tamaño fijo:
+### 7.2. Widget storage (closed decision)
+A **two-level** model:
+1. **Common node** in a flat arena: `Slab<WidgetNode>`, a small fixed-size
+   header:
    `{ type_tag: u16, style_id: u32, flags: u32, parent: Option<WidgetId>, first_child, last_child, prev_sibling, next_sibling, bounds: Rect }`.
-2. **Datos específicos del tipo** en **slabs por tipo** (`Slab<Button>`, `Slab<Label>`, …); el nodo guarda `type_tag` + el índice a su payload.
+2. **Per-type data** in **per-type slabs** (`Slab<Button>`, `Slab<Label>`,
+   …); the node holds the `type_tag` plus the index of its payload.
 
-**`WidgetId`** = 64 bits (generación:32 | índice:32) al arena de nodos.
+**`WidgetId`** = 64 bits (generation:32 | index:32) into the node arena.
 
-**Hijos:** **enlaces intrusivos** (`first_child`/`last_child`/`prev_sibling`/`next_sibling`), **sin `Vec<WidgetId>` por widget**. Inserta/elimina en O(1) y sin asignaciones de heap.
+**Children:** **intrusive links**
+(`first_child`/`last_child`/`prev_sibling`/`next_sibling`), **no
+`Vec<WidgetId>` per widget**. Insert/remove in O(1) with no heap
+allocations.
 
-**Motivos:** el nodo es contiguo (buena localidad para hit-test, recorrido y layout global); los datos por tipo son contiguos (buena localidad y *batching*). Evita el desperdicio de un `enum Widget` (tamaño = variante mayor) y el heap por nodo.
+**Rationale:** the node is contiguous (good locality for hit-testing,
+traversal, and global layout); per-type data is contiguous (good locality
+and batching). This avoids the waste of a `enum Widget` (size = largest
+variant) and per-node heap.
 
-> La cifra "24 bytes por widget" de la documentación antigua está **retirada**. El tamaño del nodo se **mide** (§14), no se promete.
+> The "24 bytes per widget" figure from the old documentation is
+> **withdrawn**. The node size is **measured** (§14), not promised.
 
 ---
 
-## 8. Entrada y teclado
+## 8. Input and keyboard
 
-- `rivet-window` usa **`libxkbcommon`** para keymap/keysym/compose. Reimplementar XKB "a mano" se **descarta** por coste/riesgo.
-- **IME (`text-input-v3`)** se **difiere**: no es necesario para la v1 (texto latino).
+- `rivet-window` uses **`libxkbcommon`** for keymap/keysym/compose.
+  Reimplementing XKB by hand is **ruled out** on cost/risk grounds.
+- **IME (`text-input-v3`)** is **deferred**: not required for v1 (Latin
+  text).
 
 ---
 
-## 9. Subsistema gráfico (especificación corregida)
+## 9. Graphics subsystem (corrected specification)
 
-### 9.1. Contexto OpenGL
-- **Baseline obligatorio: OpenGL 3.3 Core.** Todo el render (formas, texto, blur por *framebuffer ping-pong*, blends, FBO) funciona en 3.3.
-- **Ruta "compute" opcional**, detectada en runtime (`GL_ARB_compute_shader` / GL 4.3 / GLES 3.1). El renderer **no depende** de ella.
-- **Vulkan:** horizonte v2+.
-- Atributos de contexto correctos: `EGL_CONTEXT_MAJOR_VERSION` y `EGL_CONTEXT_MINOR_VERSION` (no existe `EGL_CONTEXT_OPENGL_VERSION`).
+### 9.1. OpenGL context
+- **Mandatory baseline: OpenGL 3.3 Core.** All rendering (shapes, text,
+  framebuffer ping-pong blur, blends, FBOs) works on 3.3.
+- **Optional "compute" path**, detected at runtime
+  (`GL_ARB_compute_shader` / GL 4.3 / GLES 3.1). The renderer does **not**
+  depend on it.
+- **Vulkan:** v2+ horizon.
+- Correct context attributes: `EGL_CONTEXT_MAJOR_VERSION` and
+  `EGL_CONTEXT_MINOR_VERSION` (`EGL_CONTEXT_OPENGL_VERSION` does not
+  exist).
 
-### 9.2. Efectos (blur)
-El blur base (v1) es **fragment shader con FBO ping-pong** (dos pasadas separables). La versión por **compute shader** es una optimización condicionada a §9.1. No se describe el blur v1 como "compute".
+### 9.2. Effects (blur)
+The v1 blur is a **fragment shader with FBO ping-pong** (two separable
+passes). The **compute shader** version is an optimization conditioned on
+§9.1. The v1 blur must not be described as "compute".
 
-### 9.3. Presentación de buffers
+### 9.3. Buffer presentation
 ```
-Render en rivet-canvas:
-  1. Dibujar en el back buffer (FBO o surface).
-  2. Presentar según ruta:
-     a) wl_shm:  canvas escribe píxeles en el buffer compartido (memfd),
-                 window hace wl_surface.attach + commit.        [copia, v1]
-     b) dmabuf:  se exporta la imagen (EGL_MESA_image_dma_buf_export),
-                 se crea wl_buffer (zwp_linux_dmabuf_v1.create_params),
-                 window adjunta y hace commit.                   [zero-copy, v1.x]
-  3. Sincronización:
-     - v1: implícita (suficiente con wl_shm).
-     - DMABUF: preferir explícita (linux-drm-syncobj-v1), no solo implícita.
+Rendering in rivet-canvas:
+  1. Draw into the back buffer (FBO or surface).
+  2. Present depending on the path:
+     a) wl_shm:  canvas writes pixels into the shared buffer (memfd),
+                 window does wl_surface.attach + commit.        [copy, v1]
+     b) dmabuf:  the image is exported (EGL_MESA_image_dma_buf_export),
+                 a wl_buffer is created (zwp_linux_dmabuf_v1.create_params),
+                 window attaches and commits.                    [zero-copy, v1.x]
+  3. Synchronization:
+     - v1: implicit (sufficient with wl_shm).
+     - DMABUF: prefer explicit (linux-drm-syncobj-v1), not implicit only.
 ```
 
-| Ruta | Memoria | ¿Zero-copy? | Uso |
+| Path | Memory | Zero-copy? | Use |
 |---|---|---|---|
-| `wl_shm` | RAM del sistema (memfd) | **No** (copia) | v1 (simple, portable) |
-| DMA-BUF (`zwp_linux_dmabuf_v1`) | VRAM de la GPU | **Sí** | v1.x, con gatillo por medición |
+| `wl_shm` | System RAM (memfd) | **No** (copy) | v1 (simple, portable) |
+| DMA-BUF (`zwp_linux_dmabuf_v1`) | GPU VRAM | **Yes** | v1.x, gated on measurement |
 
-- **Exportar** desde GL = `EGL_MESA_image_dma_buf_export`.
-- **Importar** hacia GL = `EGL_EXT_image_dma_buf_import` (p. ej. vídeo). No confundir: la documentación antigua usaba "import" para exportar.
-- **VSync** se controla con `eglSwapInterval` (no con `EGL_SWAP_BEHAVIOR_PRESERVED`).
+- **Export** from GL = `EGL_MESA_image_dma_buf_export`.
+- **Import** into GL = `EGL_EXT_image_dma_buf_import` (e.g. video). Do not
+  confuse the two: the old documentation used "import" for exporting.
+- **VSync** is controlled with `eglSwapInterval` (not with
+  `EGL_SWAP_BEHAVIOR_PRESERVED`).
 
-### 9.4. Dirección de dependencias
-`rivet-window` **crea/gestiona** el buffer y lo presenta (`attach`/`commit`); `rivet-canvas` **escribe/renderiza** en él. `rivet-canvas` **no depende** de `rivet-window`.
+### 9.4. Dependency direction
+`rivet-window` **creates/manages** the buffer and presents it
+(`attach`/`commit`); `rivet-canvas` **writes/renders** into it.
+`rivet-canvas` does **not** depend on `rivet-window`.
 
 ---
 
-## 10. Decisiones de Arquitectura (ADR)
+## 10. Architecture Decision Records (ADR)
 
-Todas **cerradas** (2026-10-11). Cambios futuros requieren una nueva entrada.
+All **closed** (2026-10-11). Future changes require a new entry.
 
-| ID | Tema | Decisión |
+| ID | Topic | Decision |
 |---|---|---|
-| **ADR-01** | Baseline gráfico | GL 3.3 Core obligatorio; compute opcional en runtime; Vulkan v2+. |
-| **ADR-02** | Presentación | `wl_shm` en v1; DMA-BUF en v1.x, con sincronización explícita y gatillo por medición. |
-| **ADR-03** | Almacén de widgets | Nodo común `WidgetNode` + slabs por tipo; `WidgetId` de 64 bits. |
-| **ADR-04** | Hijos | Enlaces intrusivos (`first_child`/`last_child`/`prev_sibling`/`next_sibling`); sin `Vec` por widget. |
-| **ADR-05** | Fuentes | Descubrimiento con crate `fontdb` (Rust puro) + fuente de respaldo empaquetada; **sin `fontconfig`**. |
-| **ADR-06** | Colores | `lighten`/`darken` se derivan **por tema** en codegen; cambiar de tema = swap O(1). |
-| **ADR-07** | Efectos | Blur = FBO ping-pong; compute opcional. |
-| **ADR-08** | Vocabulario | **Prohibido** "0% de CPU". Frases estándar: resolución de estilo/estado = "O(1): operación de memoria"; toda interacción incluye un redibujado con coste. |
+| **ADR-01** | Graphics baseline | GL 3.3 Core mandatory; compute optional at runtime; Vulkan v2+. |
+| **ADR-02** | Presentation | `wl_shm` in v1; DMA-BUF in v1.x, with explicit synchronization, gated on measurement. |
+| **ADR-03** | Widget storage | Common `WidgetNode` + per-type slabs; 64-bit `WidgetId`. |
+| **ADR-04** | Children | Intrusive links (`first_child`/`last_child`/`prev_sibling`/`next_sibling`); no per-widget `Vec`. |
+| **ADR-05** | Fonts | Discovery via the `fontdb` crate (pure Rust) + a bundled fallback font; **no `fontconfig`**. |
+| **ADR-06** | Colors | `lighten`/`darken` are derived **per theme** at codegen time; switching themes = O(1) swap. |
+| **ADR-07** | Effects | Blur = FBO ping-pong; compute optional. |
+| **ADR-08** | Vocabulary | "0% CPU" is **forbidden**. Standard phrasing: style/state resolution = "O(1): a memory operation"; every interaction includes a redraw with a cost. |
 
 ---
 
-## 11. Especificaciones por subsistema
+## 11. Per-subsystem specifications
 
 ### `rivet-foundation`
-- **Propósito:** núcleo del ecosistema.
-- **Contenido:** slab con generaciones (IDs de 64 bits), bucle de eventos con `epoll`, config (TOML), tipos de error, utilidades.
-- **Decisión:** IDs de 64 bits = 32 índice + 32 generación (cerrada).
+- **Purpose:** the ecosystem's core.
+- **Contents:** generational slab (64-bit IDs), epoll event loop, config
+  (TOML), error types, utilities.
+- **Decision:** 64-bit IDs = 32 index + 32 generation (closed).
 
 ### `rivet-window`
-- **Propósito:** cliente Wayland nativo.
-- **Contenido:** socket, `wl_registry`, `xdg_shell`, `layer_shell`, popups, subsurfaces, entrada (`wl_seat`/pointer/keyboard/touch), buffers (`memfd_create`/`wl_shm`/DMA-BUF), HiDPI.
+- **Purpose:** native Wayland client.
+- **Contents:** socket, `wl_registry`, `xdg_shell`, `layer_shell`,
+  popups, subsurfaces, input (`wl_seat`/pointer/keyboard/touch), buffers
+  (`memfd_create`/`wl_shm`/DMA-BUF), HiDPI.
 - **Buffers:**
-  - **v1 = `wl_shm`** (memoria compartida con `memfd_create`): simple, portable. **No** es zero-copy.
-  - **DMA-BUF = v1.x**, con gatillo basado en medición y **sincronización explícita** (`linux-drm-syncobj-v1`).
-  - `wl_shm` **nunca fue zero-copy** (no se "pierde" zero-copy al elegirlo).
-- **Teclado:** `libxkbcommon` (compila el keymap del compositor; keysym/UTF-8). No se reimplementa XKB. IME diferido.
-- **Dirección:** entrega superficie/buffer a `rivet-canvas`; no al revés.
+  - **v1 = `wl_shm`** (shared memory via `memfd_create`): simple,
+    portable. **Not** zero-copy.
+  - **DMA-BUF = v1.x**, gated on measurement, with **explicit
+    synchronization** (`linux-drm-syncobj-v1`).
+  - `wl_shm` **was never zero-copy** (no zero-copy is "lost" by choosing
+    it).
+- **Keyboard:** `libxkbcommon` (compiles the compositor's keymap;
+  keysym/UTF-8). XKB is not reimplemented. IME deferred.
+- **Direction:** hands surface/buffer to `rivet-canvas`; never the
+  reverse.
 
 ### `rivet-canvas`
-- **Propósito:** render 2D por GPU (OpenGL 3.3 Core + EGL).
-- **Contenido:** shaders, geometría, texturas, efectos (FBO ping-pong), presentación.
-- **Correcciones clave:** ver §9. Exportación DMA-BUF = `EGL_MESA_image_dma_buf_export`; VSync = `eglSwapInterval`; sin compute en 3.3.
-- **VRAM por glifo:** unos **pocos KB** por glifo de 32 px (no MB).
-- **No** consume CPU "0%" durante render continuo: hay envío de draw calls y presentación.
-- **No depende de `rivet-window`.**
+- **Purpose:** GPU 2D rendering (OpenGL 3.3 Core + EGL).
+- **Contents:** shaders, geometry, textures, effects (FBO ping-pong),
+  presentation.
+- **Key corrections:** see §9. DMA-BUF export =
+  `EGL_MESA_image_dma_buf_export`; VSync = `eglSwapInterval`; no compute
+  on 3.3.
+- **VRAM per glyph:** a **few KB** per 32 px glyph (not MB).
+- It does **not** consume "0%" CPU during continuous rendering: draw
+  calls must be submitted and presented.
+- **Does not depend on `rivet-window`.**
 
 ### `rivet-typography`
-- **Propósito:** convertir fuentes TrueType/OpenType en glifos rasterizados (bitmap) + métricas base.
-- **Contenido:** parser de tablas (con `ttf-parser` para la lectura de bajo nivel; lógica propia de extracción), rasterizado (De Casteljau + scanline, antialiasing), caché de glifos (LRU), métricas (`hmtx`).
-- **NO hace:** kerning, shaping, posicionamiento de línea, dirección de escritura. Eso es de `rivet-ui` / `rivet-layout` (futuro).
-- **Descubrimiento de fuentes:** crate `fontdb` (Rust puro) + fuente de respaldo empaquetada; **sin `fontconfig`**.
-- **Limitaciones v1 (documentadas):** sin kerning (`kern`/`GPOS`); sin shaping (árabe/hindi **no** correctos); **sin hinting completo** (solo alineación a la cuadrícula → nitidez subóptima a cuerpos pequeños); sin emoji a color (COLRv1/SVG).
-- **Shaping futuro:** se delegará a `rustybuzz` (Rust puro) en una versión posterior.
+- **Purpose:** turning TrueType/OpenType fonts into rasterized (bitmap)
+  glyphs plus base metrics.
+- **Contents:** table parsing (with `ttf-parser` for low-level reading;
+  extraction logic is our own), rasterization (De Casteljau + scanline,
+  antialiasing), glyph cache (LRU), metrics (`hmtx`).
+- **Does NOT do:** kerning, shaping, line positioning, writing direction.
+  That belongs to `rivet-ui` / a future `rivet-layout`.
+- **Font discovery:** the `fontdb` crate (pure Rust) + a bundled fallback
+  font; **no `fontconfig`**.
+- **Documented v1 limitations:** no kerning (`kern`/`GPOS`); no shaping
+  (Arabic/Hindi are **not** rendered correctly); **no full hinting** (grid
+  alignment only → suboptimal sharpness at small sizes); no color emoji
+  (COLRv1/SVG).
+- **Future shaping:** to be delegated to `rustybuzz` (pure Rust) in a
+  later version.
 
 ### `rivet-image`
-- **Propósito:** carga/decodificación de imágenes e iconos.
-- **Contenido:** PNG/JPEG (+ SVG/WebP si es viable), iconos y temas de iconos.
-- **Necesario** para iconos e imágenes del toolkit; no opcional.
+- **Purpose:** image and icon loading/decoding.
+- **Contents:** PNG/JPEG (+ SVG/WebP if viable), icons and icon themes.
+- **Required** for the toolkit's icons and images; not optional.
 
 ### `rivet-style`
-- **Propósito:** estilos precompilados en tablas planas.
-- **Contenido:** pipeline de compilación (parser → optimizador → codegen), tablas numéricas planas indexadas por enteros, estados por índice, paletas y temas.
-- **Coste:** aplicar un estilo es una **operación de índice (O(1))**. **No** afirma "0% de CPU": la *resolución* es barata, pero la interacción completa redibuja.
-- **Colores derivados:** `lighten`/`darken` se generan **por tema** en codegen; cambio de tema = swap O(1). Las cifras tipo "~1 ns" son **objetivos a medir**, no datos.
+- **Purpose:** precompiled styles in flat tables.
+- **Contents:** compilation pipeline (parser → optimizer → codegen), flat
+  numeric tables indexed by integers, states by index, palettes and
+  themes.
+- **Cost:** applying a style is an **index operation (O(1))**. It does
+  **not** claim "0% CPU": *resolution* is cheap, but a full interaction
+  redraws.
+- **Derived colors:** `lighten`/`darken` are generated **per theme** at
+  codegen time; theme switch = O(1) swap. Figures like "~1 ns" are
+  **targets to measure**, not data.
 
 ### `rivet-ui`
-- **Propósito:** widgets por composición, layout, eventos, foco.
-- **Almacenamiento:** nodo común `WidgetNode` + slabs por tipo; hijos por enlaces intrusivos (§7).
-- **Ciclo de vida:** estados Normal/Hover/Active/Focus/Disabled; composición (no herencia); jerarquía por `WidgetId`.
-- **Coste:** la *resolución de estado* es O(1); el ciclo completo de interacción incluye layout y redibujado.
-- **Correcciones de tamaño:** `Option<WidgetId>` = 8 B con nicho (16 B sin él), nunca 9; `Option<Rect>` = 20 B (padding), nunca 17. El "~83 B" del struct es estimación → **medir**.
+- **Purpose:** widgets by composition, layout, events, focus.
+- **Storage:** common `WidgetNode` + per-type slabs; children via
+  intrusive links (§7).
+- **Lifecycle:** Normal/Hover/Active/Focus/Disabled states; composition
+  (no inheritance); hierarchy by `WidgetId`.
+- **Cost:** *state resolution* is O(1); the full interaction cycle
+  includes layout and redraw.
+- **Size corrections:** `Option<WidgetId>` = 8 B with the niche (16 B
+  without); `Option<Rect>` = 20 B (padding), never 17. The "~83 B"
+  estimate for the struct is to be **measured**.
 
-### `rivet` (fachada)
-- Re-exporta el ecosistema para el usuario final. Es el "paraguas" equivalente a `#include <gtk/gtk.h>`.
-
----
-
-## 12. Alcance v1
-
-El alcance de Rivet v1 se define por el conjunto mínimo de componentes del toolkit: lo necesario para construir software gráfico ligero sobre Wayland.
-
-**Entra en v1:** `xdg_shell` + `layer_shell`, overlays, popups, subsurfaces, HiDPI; transparencia e input regions (click-through); render de formas, imágenes y texto (latín/números); PNG/JPEG (+SVG si viable) e iconos/temas; widgets mínimos (`Label`, `Box/Row`, `Button`, `Image/Icon`, `TextInput`, `List`, `Popup/Menu`); estilo/config ligero; D-Bus; bucle de animación.
-
-**Fuera de v1 (horizonte):** IME, shaping/BiDi completo, a11y AT-SPI, portapapeles/DnD, motor CSS completo, Vulkan, X11/XWayland, bindings.
+### `rivet` (facade)
+- Re-exports the ecosystem for the end user. It is the umbrella equivalent
+  of `#include <gtk/gtk.h>`.
 
 ---
 
-## 13. Hoja de ruta
+## 12. v1 scope
 
-### 13.1. Enfoque: build vs. borrow
-Para llegar rápido a las apps, se arranca sobre la **pila Rust pura** y se sustituye por crates Rivet donde aporte.
+Rivet v1 is defined as the minimal set of toolkit components: what is
+needed to build lightweight graphical software on Wayland.
 
-| Necesidad | Se arranca con (Rust puro) | Se sustituye por (Rivet) cuando |
+**In v1:** `xdg_shell` + `layer_shell`, overlays, popups, subsurfaces,
+HiDPI; transparency and input regions (click-through); rendering of
+shapes, images, and text (Latin/digits); PNG/JPEG (+SVG if viable) and
+icons/themes; minimal widgets (`Label`, `Box/Row`, `Button`, `Image/Icon`,
+`TextInput`, `List`, `Popup/Menu`); light styling/config; D-Bus; animation
+loop.
+
+**Out of v1 (horizon):** IME, full shaping/BiDi, a11y AT-SPI,
+clipboard/DnD, full CSS engine, Vulkan, X11/XWayland, bindings.
+
+> Implementation note (2026-10-13): `List`/`Scroll` widgets are **not**
+> implemented in the v1 codebase; the catalog shipped with
+> Box/Panel/Button/Label/Image/TextInput. Clipboard, DnD, and gestures
+> **are** implemented in `rivet-window` despite being listed as v1.x
+> here. This section records the original plan; deviations are tracked in
+> §17.
+
+---
+
+## 13. Roadmap
+
+### 13.1. Approach: build vs. borrow
+To reach working apps quickly, the starting point is the **pure-Rust
+stack**, replaced by Rivet crates where they add value.
+
+| Need | Start with (pure Rust) | Replace with (Rivet) when |
 |---|---|---|
-| Ventana | `wayland-client` / `smithay`-rs | `rivet-window` |
-| Render | `wgpu` u otro | `rivet-canvas` |
-| Fuentes | `ttf-parser` + `fontdb` | `rivet-typography` |
-| Imágenes | `image` | `rivet-image` |
-| D-Bus | `zbus` | (probablemente se mantiene) |
-| Estilo | propio | `rivet-style` |
+| Window | `wayland-client` / `smithay`-rs | `rivet-window` |
+| Rendering | `wgpu` or similar | `rivet-canvas` |
+| Fonts | `ttf-parser` + `fontdb` | `rivet-typography` |
+| Images | `image` | `rivet-image` |
+| D-Bus | `zbus` | (probably kept) |
+| Styling | own | `rivet-style` |
 | Widgets | — | `rivet-ui` |
 
-> Se **prohíbe** depender de C de GUI aunque acelere; para esos casos se usa una alternativa **Rust puro** aunque sea menos madura.
+> Depending on GUI C is **forbidden** even when it would be faster; for
+> those cases a **pure-Rust** alternative is used even if less mature.
 
-### 13.2. Fases
-- **Fase 0 — Especificación de las crates.** Firmas, tipos y tablas de protocolo (D-03) de cada crate del §5.
-- **Fase 1 — `rivet-foundation` + `rivet-window`.** Bucle epoll, slab generacional, `xdg_shell`/`layer_shell`. **Primera medición** (§14).
-- **Fase 2 — `rivet-canvas` + `rivet-typography`.** Render GL 3.3 Core y texto latino.
-- **Fase 3 — `rivet-ui` + `rivet-style`.** Widgets por composición y estilos precompilados.
-- **Fase 4 — `rivet-image` + fachada `rivet`.** Iconos/temas y re-export del ecosistema.
-- **Fase 5 — Publicación y comunidad** (docs en inglés, semver, guía de contribución; anunciar **con componentes funcionando y medidos**).
+### 13.2. Phases
+- **Phase 0 — Crate specifications.** Signatures, types, and protocol
+  tables (D-03) for each crate in §5.
+- **Phase 1 — `rivet-foundation` + `rivet-window`.** Epoll loop,
+  generational slab, `xdg_shell`/`layer_shell`. **First measurement**
+  (§14).
+- **Phase 2 — `rivet-canvas` + `rivet-typography`.** GL 3.3 Core
+  rendering and Latin text.
+- **Phase 3 — `rivet-ui` + `rivet-style`.** Widgets by composition and
+  precompiled styles.
+- **Phase 4 — `rivet-image` + the `rivet` facade.** Icons/themes and the
+  ecosystem re-export.
+- **Phase 5 — Publication and community** (English docs, semver,
+  contribution guide; announce **with working, measured components**).
 
-### 13.3. Camino a toolkit general (horizonte)
-1. **Toolkit de componentes** (v1) → gana huella y primeros usuarios.
-2. **Framework de UI GPU** (escena, reactividad, canvas de alta precisión) → editores y apps creativas.
-3. **Toolkit general** (widgets + estilo + i18n + a11y + bindings) → compite con GTK/Qt.
+### 13.3. Path to a general toolkit (horizon)
+1. **Component toolkit** (v1) → builds a footprint and first users.
+2. **GPU UI framework** (scene graph, reactivity, high-precision canvas)
+   → editors and creative apps.
+3. **General toolkit** (widgets + styling + i18n + a11y + bindings) →
+   comparable in scope to GTK/Qt.
 
 ---
 
-## 14. Métricas y medición
+## 14. Metrics and measurement
 
-### 14.1. Política "medido, no prometido"
-Ningún documento publica RAM/CPU/latencia como **dato** sin medición. Formato obligatorio para publicar una cifra:
+### 14.1. "Measured, not promised" policy
+No document publishes RAM/CPU/latency as **data** without a measurement.
+Mandatory format to publish a figure:
 
 ```
-Métrica:      <p. ej. RSS en reposo>
-Método:       <comando, condiciones>
-Baseline:     <con qué se compara>
-Resultado:    <valor medido>
-Fecha/Commit: <referencia>
+Metric:       <e.g. idle RSS>
+Method:       <command, conditions>
+Baseline:     <what it is compared against>
+Result:       <measured value>
+Date/Commit:  <reference>
 ```
 
-Una cifra sin **método + baseline + fecha** no se publica. Los objetivos pueden citarse **como objetivos**, nunca como resultados.
+A figure without **method + baseline + date** is not published. Targets
+may be cited **as targets**, never as results.
 
-### 14.2. Protocolo de medición (obligatorio)
-**Estado: primera medición realizada** — 2026-10-13, `develop`, benches criterion en cada crate (`cargo bench --workspace`); resultados en §14.3. La tabla siguiente son **objetivos**:
+### 14.2. Measurement protocol (mandatory)
+**Status: first measurement completed** — 2026-10-13, `develop`, criterion
+benches in each crate (`cargo bench --workspace`); results in §14.3. The
+table below lists **targets**:
 
-| Área | Qué medir | Método | Baseline | Criterio |
+| Area | What to measure | Method | Baseline | Criterion |
 |---|---|---|---|---|
-| canvas | `eglInitialize`+contexto | cronómetro, 100 reps | GLX | < 50 ms |
-| canvas | compilación de shaders | cronómetro | — | < 30 ms |
-| canvas | VRAM por glifo 32px | `glGetTexLevelParameteriv` | — | en KB |
-| canvas | frame time (1k/10k/100k rects) | frame timer sin VSync | Cairo | documentar |
-| window | copia `wl_shm` (1080p) | frame time | — | gatillo DMA-BUF |
+| canvas | `eglInitialize` + context | timer, 100 reps | GLX | < 50 ms |
+| canvas | shader compilation | timer | — | < 30 ms |
+| canvas | VRAM per 32px glyph | `glGetTexLevelParameteriv` | — | in KB |
+| canvas | frame time (1k/10k/100k rects) | frame timer, no VSync | Cairo | document |
+| window | `wl_shm` copy (1080p) | frame time | — | DMA-BUF trigger |
 | window | `memfd_create` | 1000 reps | `shm_open` | < 0.1 ms |
-| style | cambio de `StyleId` | `criterion`, 1M ops | CSS en caliente | O(1) |
-| style | memoria de tablas (app media) | contador | — | objetivo (<10 KB?) |
-| ui | `size_of::<WidgetNode>()` | `size_of` | — | documentar |
-| ui | hit-test, recorrido, layout | `criterion`/frame timer | — | documentar |
-| typography | raster por glifo (16/32/64px) | `criterion` | FreeType | documentar |
+| style | `StyleId` change | `criterion`, 1M ops | hot CSS | O(1) |
+| style | table memory (average app) | counter | — | target (<10 KB?) |
+| ui | `size_of::<WidgetNode>()` | `size_of` | — | document |
+| ui | hit-test, traversal, layout | `criterion`/frame timer | — | document |
+| typography | raster per glyph (16/32/64px) | `criterion` | FreeType | document |
 
-Herramientas: `criterion`, `hyperfine`, `perf`, `smem`/`/proc/<pid>/status`, frame timer propio.
+Tools: `criterion`, `hyperfine`, `perf`, `smem`/`/proc/<pid>/status`,
+custom frame timer.
 
-### 14.3. Registro de mediciones — v0.1.0 (2026-10-13)
+### 14.3. Measurement registry — v0.1.0 (2026-10-13)
 
-Máquina: Intel Core i7-8665U (4C/8T) · Mesa Intel UHD Graphics 620 (WHL
-GT2) · Linux/Wayland (KWin) · benches en perfil `bench` (release, LTO
-thin). Baselines Cairo/FreeType/GLX: **no ejecutados** (el ecosistema no
-depende de ellos; comparación pendiente si se añade un harness dedicado).
+Machine: Intel Core i7-8665U (4C/8T) · Mesa Intel UHD Graphics 620 (WHL
+GT2) · Linux/Wayland (KWin) · benches on the `bench` profile (release,
+thin LTO). Cairo/FreeType/GLX baselines: **not executed** (the ecosystem
+does not depend on them; comparison pending until a dedicated harness
+exists).
 
-**canvas — init EGL + contexto 3.3** (objetivo < 50 ms ✓)
+**canvas — EGL init + 3.3 context** (target < 50 ms, met)
 ```
-Métrica:      eglGetDisplay+Initialize+ChooseConfig+CreateContext+MakeCurrent
-Método:       criterion `canvas/egl init + contexto 3.3`, iter_custom, FBO headless
-Baseline:     GLX (pendiente)
-Resultado:    37.7–39.9 ms (mediana 38.8 ms) — REAL (UHD 620)
-Fecha/Commit: 2026-10-13, develop
+Metric:       eglGetDisplay+Initialize+ChooseConfig+CreateContext+MakeCurrent
+Method:       criterion `canvas/egl init + contexto 3.3`, iter_custom, headless FBO
+Baseline:     GLX (pending)
+Result:       37.7–39.9 ms (median 38.8 ms) — real hardware (UHD 620)
+Date/Commit:  2026-10-13, develop
 ```
 
-**canvas — compilación de shaders** (objetivo < 30 ms ✓, margen 30×)
+**canvas — shader compilation** (target < 30 ms, met; 30× headroom)
 ```
-Métrica:      GraphicsContext::from_loader (loader + 2 programas enlazados)
-Método:       criterion `canvas/compilación de shaders`, contexto persistente
+Metric:       GraphicsContext::from_loader (loader + 2 linked programs)
+Method:       criterion `canvas/compilación de shaders`, persistent context
 Baseline:     —
-Resultado:    1.00–1.02 ms (mediana 1.01 ms)
-Fecha/Commit: 2026-10-13, develop
+Result:       1.00–1.02 ms (median 1.01 ms)
+Date/Commit:  2026-10-13, develop
 ```
 
-**canvas — frame time con N rects, 1080p** (criterio: documentar)
+**canvas — frame time with N rects, 1080p** (criterion: document)
 ```
-Métrica:      render GL al FBO + glReadPixels 1920x1080 (ruta wl_shm v1, sin VSync)
-Método:       criterion `canvas/frame {N} rects`, batch plano, colores rotados
-Baseline:     Cairo (pendiente)
-Resultado:    1k: 8.88 ms (~112 fps) · 10k: 11.95 ms (~84 fps) · 100k: 28.38 ms (~35 fps)
-              Margen 1k→100k: +19.5 ms por 99k rects ≈ 200 ns/rect marginal.
-              El readback domina el costo fijo (~8 ms) → gatillo DMA-BUF (ADR-02).
-Fecha/Commit: 2026-10-13, develop
+Metric:       GL render to FBO + glReadPixels 1920x1080 (v1 wl_shm path, no VSync)
+Method:       criterion `canvas/frame {N} rects`, flat batch, rotated colors
+Baseline:     Cairo (pending)
+Result:       1k: 8.88 ms (~112 fps) · 10k: 11.95 ms (~84 fps) · 100k: 28.38 ms (~35 fps)
+              1k→100k margin: +19.5 ms for 99k rects ≈ 200 ns/rect marginal.
+              Readback dominates the fixed cost (~8 ms) → DMA-BUF trigger (ADR-02).
+Date/Commit:  2026-10-13, develop
 ```
 
-**canvas/typography — VRAM por glifo 32 px** (criterio: en KB)
+**canvas/typography — VRAM per 32 px glyph** (criterion: in KB)
 ```
-Métrica:      VRAM por glifo de 32 px en el atlas (página 512² RGBA, padding 1)
-Método:       estimación por página llena: 415 glifos/página (método §14
-              glGetTexLevelParameteriv sustituido por estimación: sin
-              query de memoria real en llvmpipe/iGPU)
+Metric:       VRAM per 32 px glyph in the atlas (512² RGBA page, padding 1)
+Method:       full-page estimate: 415 glyphs/page (the §14
+              glGetTexLevelParameteriv method was replaced by an estimate:
+              no real memory query on llvmpipe/iGPU)
 Baseline:     —
-Resultado:    ~5.0 KB/glifo (página de 1 MiB / 415 glifos)
-Fecha/Commit: 2026-10-13, develop
+Result:       ~5.0 KB/glyph (1 MiB page / 415 glyphs)
+Date/Commit:  2026-10-13, develop
 ```
 
-**window — memfd_create** (objetivo < 0.1 ms ✓, margen 55×)
+**window — memfd_create** (target < 0.1 ms, met; 55× headroom)
 ```
-Métrica:      memfd_create + close
-Método:       criterion `window/memfd_create+close` (1000+ reps)
-Baseline:     shm_open + shm_unlink (POSIX) — MEDIDO: 5.14 µs/op
-Resultado:    1.79 µs/op → memfd 2.9× más rápido que el baseline
-Fecha/Commit: 2026-10-13, develop
+Metric:       memfd_create + close
+Method:       criterion `window/memfd_create+close` (1000+ reps)
+Baseline:     shm_open + shm_unlink (POSIX) — MEASURED: 5.14 µs/op
+Result:       1.79 µs/op → memfd 2.9× faster than the baseline
+Date/Commit:  2026-10-13, develop
 ```
 
-**window — pool de buffers 1080p** (criterio: documentar)
+**window — 1080p buffer pool** (criterion: document)
 ```
-Métrica:      ShmPixels::new(1920, 1080, 3 slots) — memfd + ftruncate + mmap + unmap
-Método:       criterion `window/pool ShmPixels 1080p x3`
+Metric:       ShmPixels::new(1920, 1080, 3 slots) — memfd + ftruncate + mmap + unmap
+Method:       criterion `window/pool ShmPixels 1080p x3`
 Baseline:     —
-Resultado:    5.43 µs (páginas lazy: sin tocar físicamente los 24 MiB)
-Fecha/Commit: 2026-10-13, develop
+Result:       5.43 µs (lazy pages: the 24 MiB is not physically touched)
+Date/Commit:  2026-10-13, develop
 ```
 
-**style — cambio de StyleId** (objetivo O(1) ✓)
+**style — StyleId change** (target O(1), met)
 ```
-Métrica:      StyleTable::get(kind, estado) con rotación de (tipo, estado)
-Método:       criterion `style/lookup (kind,estado)`; 1M ops ≈ 3.3 ms
-Baseline:     CSS en caliente (pendiente)
-Resultado:    3.33 ns/op (~300M ops/s) — indexación plana constante,
-              independiente del contenido de la tabla
-Fecha/Commit: 2026-10-13, develop
+Metric:       StyleTable::get(kind, state) rotating over (kind, state)
+Method:       criterion `style/lookup (kind,estado)`; 1M ops ≈ 3.3 ms
+Baseline:     hot CSS (pending)
+Result:       3.33 ns/op (~300M ops/s) — constant flat indexing,
+              independent of table contents
+Date/Commit:  2026-10-13, develop
 ```
 
-**style — memoria de tablas** (objetivo < 10 KB ✓)
+**style — table memory** (target < 10 KB, met)
 ```
-Métrica:      size_of StyleTable compilada de EXAMPLE_DSL (10 tipos × 5 filas + paleta)
-Método:       size_of_val (contador estático)
+Metric:       size_of StyleTable compiled from EXAMPLE_DSL (10 kinds × 5 rows + palette)
+Method:       size_of_val (static counter)
 Baseline:     —
-Resultado:    48 bytes
-Fecha/Commit: 2026-10-13, develop
+Result:       48 bytes
+Date/Commit:  2026-10-13, develop
 ```
 
-**ui — tamaño del nodo** (criterio: documentar)
+**ui — node size** (criterion: document)
 ```
-Métrica:      size_of::<WidgetNode>() (nodo común ADR-03; la cifra "24 bytes"
-              de la doc antigua queda sustituida por la medida)
-Método:       size_of (contador estático)
+Metric:       size_of::<WidgetNode>() (common node, ADR-03; replaces the
+              withdrawn "24 bytes" figure from the old docs)
+Method:       size_of (static counter)
 Baseline:     —
-Resultado:    104 bytes (5×Option<WidgetId> + kind + estado + Rect + dirty,
-              con padding)
-Fecha/Commit: 2026-10-13, develop
+Result:       104 bytes (5×Option<WidgetId> + kind + state + Rect + dirty,
+              with padding)
+Date/Commit:  2026-10-13, develop
 ```
 
-**ui — hit-test, layout y recorrido** (criterio: documentar)
+**ui — hit-test, layout, traversal** (criterion: document)
 ```
-Métrica:      hit-test de 1 punto, layout completo (2 pasadas), recorrido del árbol
-Método:       criterion sobre árbol de 1050 widgets (50 cajas × 20 botones + raíz),
-              viewport 1280×720
+Metric:       hit-test of one point, full layout (2 passes), tree traversal
+Method:       criterion over a 1050-widget tree (50 boxes × 20 buttons + root),
+              1280×720 viewport
 Baseline:     —
-Resultado:    hit-test: 5.76 µs/punto · layout: 5.48 ms/frame completo
-              (≈5.2 µs/widget, dominado por medición de texto) ·
-              recorrido: 5.91 µs (1050 nodos)
-Fecha/Commit: 2026-10-13, develop
+Result:       hit-test: 5.76 µs/point · layout: 5.48 ms/full frame
+              (≈5.2 µs/widget, dominated by text measurement) ·
+              traversal: 5.91 µs (1050 nodes)
+Date/Commit:  2026-10-13, develop
 ```
 
-**typography — raster por glifo** (criterio: documentar; baseline FreeType pendiente)
+**typography — raster per glyph** (criterion: document; FreeType baseline pending)
 ```
-Métrica:      rasterizado analítico del glifo 'R' (Inter Regular), subpíxel ¼px
-Método:       criterion `typography/raster glifo {N}px`
-Baseline:     FreeType (pendiente)
-Resultado:    16px: 145.7 µs · 32px: 189.7 µs · 64px: 274.5 µs
-              (por glifo; ~1000 glifos/s a 32px ≈ 190 ms de atlas lleno)
-Fecha/Commit: 2026-10-13, develop
+Metric:       analytical rasterization of glyph 'R' (Inter Regular), ¼px subpixel
+Method:       criterion `typography/raster glifo {N}px`
+Baseline:     FreeType (pending)
+Result:       16px: 145.7 µs · 32px: 189.7 µs · 64px: 274.5 µs
+              (per glyph; ~1000 glyphs/s at 32px ≈ 190 ms to fill a page)
+Date/Commit:  2026-10-13, develop
 ```
 
-**Pendientes de medir:** copia `wl_shm` 1080p como desglose independiente
-(el readback del frame end-to-end está medido arriba), RSS en reposo de la
-app de ejemplo, comparativas contra Cairo/FreeType/GLX.
+**Not yet measured:** the `wl_shm` 1080p copy as an independent breakdown
+(the end-to-end frame readback is measured above), idle RSS of the example
+application, and the Cairo/FreeType/GLX comparisons.
 
 ---
 
-## 15. Registro de malentendidos resueltos
+## 15. Design log: resolved misconceptions
 
-Estas creencias aparecieron en la documentación antigua (Wrappers/Zero/v1). Se registran **resueltas** para que no vuelvan a introducirse. **La columna "realidad canónica" es la vigente.**
+These beliefs appeared in the old documentation (Wrappers/Zero/v1). They
+are recorded as **resolved** so they are not reintroduced. **The "canonical
+reality" column is authoritative.**
 
-### 15.1. Identidad
+### 15.1. Identity
 
-| ID | Creencia antigua (errónea) | Realidad canónica |
+| ID | Old (mistaken) belief | Canonical reality |
 |---|---|---|
-| C-01 | "Rivet es un escritorio / DE." | Es un **toolkit de librerías**. No es escritorio, WM ni entorno. |
-| C-02 | "Reemplaza a GTK/Wrappers 1:1." | Cubre el rol de GTK/Qt, pero **no** es drop-in ni clona su catálogo. |
-| C-03 | "Se puede escribir todo sin C alguno." | Meta = **cero C de GUI**; se admite C de sistema en allowlist (§6). |
-| C-04 | "Wrappers/Zero = Rivet." | Son **fases históricas**; el legacy es registro, no especificación. |
-| C-05 | "Sin dependencias externas maduras" como dogma. | Se admiten crates **Rust puro** si aportan; solo se prohíbe C de GUI. |
-| C-06 | Licencia CC BY-SA/LGPLv3 para código. | **CC BY-SA no es apta para código.** Se usa MIT OR Apache-2.0. |
+| C-01 | "Rivet is a desktop / DE." | It is a **library toolkit**. Not a desktop, WM, or environment. |
+| C-02 | "It replaces GTK/Wrappers 1:1." | It covers the GTK/Qt role, but is **not** a drop-in and does not clone their catalog. |
+| C-03 | "Everything can be written with no C at all." | The goal = **zero GUI C**; system C is allowed via the allowlist (§6). |
+| C-04 | "Wrappers/Zero = Rivet." | They are **historical phases**; legacy is a record, not a specification. |
+| C-05 | "No mature external dependencies" as dogma. | **Pure-Rust** crates are allowed when they contribute; only GUI C is forbidden. |
+| C-06 | CC BY-SA/LGPLv3 for code. | **CC BY-SA is unsuitable for code.** MIT OR Apache-2.0 is used. |
 
-### 15.2. Técnico (gráficos, entrada)
+### 15.2. Technical (graphics, input)
 
-| ID | Creencia antigua (errónea) | Realidad canónica |
+| ID | Old (mistaken) belief | Canonical reality |
 |---|---|---|
-| E-01 | Blur con **compute shaders en GL 3.3**. | GL 3.3 **no** tiene compute (llegan en 4.3). Usar FBO ping-pong; compute opcional. |
-| E-02 | `wl_shm` = zero-copy. | `wl_shm` **copia**. Zero-copy real = **DMA-BUF**. |
-| E-03 | Exportar desde GL con `EGL_EXT_image_dma_buf_import`. | Esa extensión **importa** hacia GL. Para exportar: **`EGL_MESA_image_dma_buf_export`**. |
-| E-04 | Mezclar `eglSwapBuffers` con "exportar DMABUF + attach". | Son **dos modelos** distintos (ver §9.3). |
-| E-05 | `EGL_SWAP_BEHAVIOR_PRESERVED` como control de VSync. | VSync = **`eglSwapInterval`**. |
-| E-06 | "<4 MB por glifo (32px)". | Un glifo 32px son **unos pocos KB**. |
-| E-07 | Traducir scancodes a Unicode "a mano". | Equivale a reimplementar XKB: se usa **`libxkbcommon`**. |
-| E-08 | `zero-wayland` → `zero-gfx` para obtener buffers. | Invertida: **window entrega superficie/buffer a canvas**; canvas no depende de window. |
-| E-09 | Ciclo de presentación circular entre canvas y window. | Frontera fija: window = protocolo/presentación; canvas = render. |
-| E-10 | Atributo `EGL_CONTEXT_OPENGL_VERSION`. | No existe: usar `EGL_CONTEXT_MAJOR_VERSION`/`MINOR_VERSION`. |
+| E-01 | Blur via **compute shaders on GL 3.3**. | GL 3.3 has **no** compute (added in 4.3). Use FBO ping-pong; compute is optional. |
+| E-02 | `wl_shm` = zero-copy. | `wl_shm` **copies**. Real zero-copy = **DMA-BUF**. |
+| E-03 | Export from GL via `EGL_EXT_image_dma_buf_import`. | That extension **imports** into GL. To export: **`EGL_MESA_image_dma_buf_export`**. |
+| E-04 | Mixing `eglSwapBuffers` with "export DMABUF + attach". | They are **two distinct models** (see §9.3). |
+| E-05 | `EGL_SWAP_BEHAVIOR_PRESERVED` as VSync control. | VSync = **`eglSwapInterval`**. |
+| E-06 | "<4 MB per glyph (32px)". | A 32px glyph is **a few KB**. |
+| E-07 | Translating scancodes to Unicode by hand. | That amounts to reimplementing XKB: use **`libxkbcommon`**. |
+| E-08 | `zero-wayland` → `zero-gfx` to obtain buffers. | Inverted: **window hands surface/buffer to canvas**; canvas does not depend on window. |
+| E-09 | Circular presentation cycle between canvas and window. | Fixed boundary: window = protocol/presentation; canvas = rendering. |
+| E-10 | The `EGL_CONTEXT_OPENGL_VERSION` attribute. | It does not exist: use `EGL_CONTEXT_MAJOR_VERSION`/`MINOR_VERSION`. |
 
-### 15.3. Memoria y widgets
+### 15.3. Memory and widgets
 
-| ID | Creencia antigua (errónea) | Realidad canónica |
+| ID | Old (mistaken) belief | Canonical reality |
 |---|---|---|
-| M-01 | "Un widget = 24 bytes" con `children: Vec<WidgetId>`. | Inconsistente (el `Vec` implica heap). Cifra **retirada** hasta medir. |
-| M-02 | Un `Slab<T>` para widgets heterogéneos. | Se usa **nodo común + slabs por tipo** (ADR-03). |
-| M-03 | Hijos como `Vec<WidgetId>` por widget. | **Enlaces intrusivos** (ADR-04). |
-| M-04 | Tamaños contradictorios (28/24/24-48 B). | Número **único y medido**. |
-| M-05 | Ancho de ID `u32` vs 64 bits. | **64 bits** (32 índice + 32 generación). |
-| M-06 | `lighten(...)` en build-time. | Se deriva **por tema** (ADR-06); rompería el cambio de tema en runtime. |
-| M-07 | "canvas/window no dependen de nada". | Dependen de `libc` y del driver GL/EGL (allowlist). |
+| M-01 | "A widget = 24 bytes" with `children: Vec<WidgetId>`. | Inconsistent (a `Vec` implies heap). Figure **withdrawn** until measured. |
+| M-02 | One `Slab<T>` for heterogeneous widgets. | Use a **common node + per-type slabs** (ADR-03). |
+| M-03 | Children as a `Vec<WidgetId>` per widget. | **Intrusive links** (ADR-04). |
+| M-04 | Contradictory sizes (28/24/24-48 B). | A **single, measured** number. |
+| M-05 | `u32` vs 64-bit ID width. | **64 bits** (32 index + 32 generation). |
+| M-06 | `lighten(...)` at build time. | Derived **per theme** (ADR-06); build-time derivation would break runtime theme switching. |
+| M-07 | "canvas/window depend on nothing." | They depend on `libc` and the GL/EGL driver (allowlist). |
 
-### 15.4. Métricas
+### 15.4. Metrics
 
-| ID | Creencia antigua (errónea) | Realidad canónica |
+| ID | Old (mistaken) belief | Canonical reality |
 |---|---|---|
-| P-01 | "0% de CPU en interacción". | Prohibido (ADR-08): la resolución es O(1); el redibujado cuesta. |
-| P-02 | "RSS <15 MB" (y 10-14 / <100 / 25-35). | Se **mide por componente**; sin meta global inventada. |
-| P-03 | GTK "0.5-2 ms" vs Rivet "1 ns". | Compara cosas distintas; se elimina hasta tener mediciones equivalentes. |
-| P-03b | Tablas con "70-80% de ahorro" sin mediciones. | Retiradas. Las hipótesis no se publican con apariencia de dato. |
-| P-04 | Objetivos de RAM contradictorios. | Criterio único: **medir por componente**. |
-| P-05 | "Latencia de frame 1-2 ms" sin baseline. | Solo con protocolo y baseline publicado (§14). |
+| P-01 | "0% CPU during interaction". | Forbidden (ADR-08): resolution is O(1); redraw costs. |
+| P-02 | "RSS <15 MB" (and 10-14 / <100 / 25-35). | **Measured per component**; no invented global target. |
+| P-03 | GTK "0.5-2 ms" vs Rivet "1 ns". | Compares different things; removed until equivalent measurements exist. |
+| P-03b | Tables with "70-80% savings" without measurements. | Withdrawn. Hypotheses are not published looking like data. |
+| P-04 | Contradictory RAM targets. | Single criterion: **measure per component**. |
+| P-05 | "1-2 ms frame latency" without a baseline. | Only with a published protocol and baseline (§14). |
 
-### 15.5. Documentación y proceso
+### 15.5. Documentation and process
 
-| ID | Problema antiguo | Realidad canónica |
+| ID | Old problem | Canonical reality |
 |---|---|---|
-| D-01 | `Historia de conversacion.md` como documento. | Es un log; histórico, no especificación. |
-| D-02 | Nombres duplicados/superpuestos por subsistema. | **Este documento único** los consolida. |
-| D-03 | "Specs" narrativas sin API normativa. | Se exigen firmas, tipos y tablas de protocolo. |
-| D-04 | Cifras crecientes sin implementación. | Política "medido, no prometido". |
+| D-01 | `Historia de conversacion.md` as a document. | It is a log; historical, not a specification. |
+| D-02 | Duplicated/overlapping names per subsystem. | **This single document** consolidates them. |
+| D-03 | Narrative "specs" without a normative API. | Signatures, types, and protocol tables are required. |
+| D-04 | Growing figures without an implementation. | The "measured, not promised" policy. |
 
 ---
 
-## 16. Relación con la documentación histórica
+## 16. Relation to the historical documentation
 
-- **`Rivet Documentacion/archivo/`** — documentación v1 y borradores v2 antiguos. **Solo histórico.** No se edita; no es fuente de verdad.
-- **`Wrappers-Legacy-prerivet/`** — tres fases de identidad y debates del chat. **Solo histórico.**
-- Regla: cualquier idea que reaparezca del histórico debe pasar por **este documento** antes de entrar.
-- **Resumen:** el legacy fue un **buen cuaderno de bitácora y una mala especificación**; aportó la estructura por capas, la validación vertical y los IDs generacionales, pero también errores técnicos y métricas inventadas. Rivet conserva las ideas, corrige los datos y descarta las cifras.
+- **`Rivet Documentacion/archivo/`** — old v1 documentation and v2 drafts.
+  **Historical only.** Not edited; not a source of truth.
+- **`Wrappers-Legacy-prerivet/`** — three identity phases and chat
+  debates. **Historical only.**
+- Rule: any idea that reappears from the archive must pass through
+  **this document** before being adopted.
+- **Summary:** the legacy was a **good lab notebook and a bad
+  specification**; it contributed the layered structure, the vertical
+  validation, and generational IDs, but also technical errors and
+  invented metrics. Rivet keeps the ideas, corrects the data, and
+  discards the figures.
 
 ---
 
-## 17. Estado del proyecto
+## 17. Project status
 
-- [x] Identidad, arquitectura, dependencias y correcciones raíz — **consolidado en este documento**.
-- [x] Decisiones de arquitectura (ADR 01-08) — **cerradas**.
-- [ ] Fase 0: especificación de las crates.
-- [ ] Fase 1: `rivet-foundation` + `rivet-window` + primera medición.
-- [ ] Resto de fases (§13).
+- [x] Identity, architecture, dependencies, and root corrections —
+  **consolidated in this document.**
+- [x] Architecture decisions (ADR-01..08) — **closed** (2026-10-11).
+- [x] Phase 0: crate specifications.
+- [x] Phase 1: `rivet-foundation` + `rivet-window` + first measurement
+  (2026-10-13, §14.3).
+- [x] Phase 2: `rivet-canvas` + `rivet-typography`.
+- [x] Phase 3: `rivet-ui` + `rivet-style`.
+- [x] Phase 4: `rivet-image` + the `rivet` facade.
+- [x] v1 complete: 24 test suites green in CI, example application
+  verified on a live Wayland session.
+- [ ] Phase 5: publication and community (crates.io, semver, contribution
+  guide; announcement with working, measured components).
+- [ ] v1.x backlog: scrolling containers, menus, multiline text, IME,
+  a11y (AT-SPI), DMA-BUF, client-side decorations.
+- [ ] Remaining measurements: Cairo/FreeType/GLX baselines, `wl_shm`
+  copy breakdown, idle RSS.
 
-> **Para agentes/IA:** este es el documento autoritativo. No consultes `archivo/` ni `Wrappers-Legacy-prerivet/` para decisiones de diseño; usa únicamente este archivo. Si necesitas añadir un subsistema o cambiar una decisión, edita aquí (las decisiones cerradas requieren una nueva entrada en §10).
+> **For agents/AI:** this is the authoritative document. Do not consult
+> `archivo/` or `Wrappers-Legacy-prerivet/` for design decisions; use
+> only this file. To add a subsystem or change a decision, edit here
+> (closed decisions require a new entry in §10).

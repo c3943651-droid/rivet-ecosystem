@@ -1,102 +1,102 @@
-# rivet-canvas — Documentación definitiva
+# rivet-canvas — Definitive documentation
 
-Subsistema de **renderizado gráfico 2D por GPU** de Rivet.
+Rivet's **GPU-accelerated 2D graphics rendering** subsystem.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Capa:** 3 (renderizado)
-- **Depende de:** `rivet-foundation` (y `rivet-typography`, `rivet-image` como fuentes de textura). **NO depende de `rivet-window`.**
-- **Consumido por:** `rivet-ui`
-- **Reemplaza a:** parte de GTK/Cairo/Skia (la capa de dibujo).
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Layer:** 3 (rendering)
+- **Depends on:** `rivet-foundation` (and `rivet-typography`, `rivet-image` as texture sources). **Does NOT depend on `rivet-window`.**
+- **Consumed by:** `rivet-ui`
+- **Replaces:** part of GTK/Cairo/Skia (the drawing layer).
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-`rivet-canvas` es el motor de dibujo. Recibe una **superficie abstracta** (EGL/Wayland surface que le entrega otro módulo), una escena a dibujar y produce píxeles. Dibuja **formas, texto e imágenes** con aceleración por GPU (OpenGL). No crea ventanas ni gestiona eventos.
+`rivet-canvas` is the drawing engine. It receives an **abstract surface** (an EGL/Wayland surface provided by another module), a scene to draw, and produces pixels. It draws **shapes, text, and images** with GPU acceleration (OpenGL). It does not create windows or handle events.
 
-## 2. Arquitectura (pipeline de render)
+## 2. Architecture (render pipeline)
 
-`GraphicsContext` orquesta el frame en fases:
+`GraphicsContext` orchestrates the frame in phases:
 
-1. **Preparación** — validar contexto EGL, recoger `RenderQueue`.
-2. **Actualización de recursos:** `ShaderManager` (compila cachea programas), `TextureManager` (sube/actualiza texturas), `GeometryAssembler` (tesela primitivas → vértices).
-3. **Ordenación:** ordenar la cola por capa/estado para minimizar cambios de estado (reducir `glBind*`, *state thrashing*).
-4. **Render:** ejecutar lotes por shader/textura; FBO intermedios para efectos.
-5. **Presentación:** `PresentSynchronizer` hace `eglSwapBuffers` (throttle vsync) y recicla buffers.
+1. **Preparation** — validate the EGL context, collect the `RenderQueue`.
+2. **Resource update:** `ShaderManager` (compiles and caches programs), `TextureManager` (uploads/updates textures), `GeometryAssembler` (tessellates primitives → vertices).
+3. **Sorting:** sort the queue by layer/state to minimize state changes (reduce `glBind*` calls, *state thrashing*).
+4. **Render:** execute batches by shader/texture; intermediate FBOs for effects.
+5. **Presentation:** `PresentSynchronizer` performs `eglSwapBuffers` (vsync throttle) and recycles buffers.
 
-Gestores: `GraphicsContext`, `ShaderManager`, `TextureManager`, `GeometryAssembler`, `RenderQueue`, `PresentSynchronizer`, y `FrameStats` para telemetría.
+Managers: `GraphicsContext`, `ShaderManager`, `TextureManager`, `GeometryAssembler`, `RenderQueue`, `PresentSynchronizer`, and `FrameStats` for telemetry.
 
-## 3. Backend gráfico (ADR-01)
+## 3. Graphics backend (ADR-01)
 
-- **Baseline: OpenGL 3.3 Core** (suficiente y universal en Linux).
-- **Compute shaders: opcional en runtime**, con **fallback** a FBO ping-pong. OpenGL 3.3 **NO tiene compute**: los *shaders de cómputo* requieren GL **4.3+** o `ARB_compute_shader`. En v1 no se asume compute.
-- **Vulkan: horizonte v2+** (no en v1).
-- Contexto EGL: crear con **`EGL_CONTEXT_MAJOR_VERSION` / `EGL_CONTEXT_MINOR_VERSION`** (NO `EGL_CONTEXT_OPENGL_VERSION`).
+- **Baseline: OpenGL 3.3 Core** (sufficient and universal on Linux).
+- **Compute shaders: optional at runtime**, with **fallback** to FBO ping-pong. OpenGL 3.3 does **not** have compute: *compute shaders* require GL **4.3+** or `ARB_compute_shader`. v1 does not assume compute.
+- **Vulkan: v2+ horizon** (not in v1).
+- EGL context: create with **`EGL_CONTEXT_MAJOR_VERSION` / `EGL_CONTEXT_MINOR_VERSION`** (NOT `EGL_CONTEXT_OPENGL_VERSION`).
 - VSync: **`eglSwapInterval(display, 1)`**.
-- Efectos (blur, sombras): en v1 con **FBO ping-pong** (gaussiano separable). Blur "en tiempo real" es factible a 60 FPS con FBOs a media resolución; se mide.
+- Effects (blur, shadows): in v1 with **FBO ping-pong** (separable gaussian). Real-time blur is feasible at 60 FPS with half-resolution FBOs; this is measured.
 
-## 4. API pública (orientativa)
+## 4. Public API (indicative)
 
 ```rust
-pub struct Canvas;                 // contexto de dibujo de una superficie
-pub struct Texture;                // recurso de textura
+pub struct Canvas;                 // drawing context for a surface
+pub struct Texture;                // texture resource
 pub struct Shader;
-pub struct Mesh;                   // geometría
-pub struct Color { r, g, b, a }    // premultiplicado
+pub struct Mesh;                   // geometry
+pub struct Color { r, g, b, a }    // premultiplied
 pub struct Rect { x, y, w, h }
 pub trait Drawable { fn draw(&self, canvas: &mut Canvas); }
 pub trait TextureSource { fn texture(&self) -> &Texture; }
 ```
 
-Flujo: `begin_frame` → emitir comandos (rects, texto, texturas) → `render` → `present`.
+Flow: `begin_frame` → emit commands (rects, text, textures) → `render` → `present`.
 
-## 5. Tipografía y texto en canvas
+## 5. Typography and text in canvas
 
-- Consume `rivet-typography` (glifos rasterizados como **atlas de textura**).
-- **VRAM por glifo ~32px:** unos **KB por glifo** (máscara/gris, no MB). Un atlas de cientos de glifos ocupa un margen modesto; se cachea por (fuente, tamaño, subpíxel).
-- Corrección: se retira cualquier cifra de MB por glifo.
+- Consumes `rivet-typography` (rasterized glyphs as a **texture atlas**).
+- **VRAM per ~32px glyph:** on the order of **KB per glyph** (mask/grayscale, not MB). An atlas of hundreds of glyphs occupies a modest amount; it is cached by (font, size, subpixel).
+- Correction: any per-glyph MB figure is withdrawn.
 
-## 6. Imágenes
+## 6. Images
 
-- Consume `rivet-image` (decode PNG/JPEG/WebP/SVG → textura).
-- Subida a GPU con `glTexSubImage2D`; gestiona *upload* asíncrono/por lotes cuando aplica.
+- Consumes `rivet-image` (decode PNG/JPEG/WebP/SVG → texture).
+- Upload to GPU with `glTexSubImage2D`; uses asynchronous/batched *upload* where applicable.
 
-## 7. Presentación y buffers
+## 7. Presentation and buffers
 
-- Canvas **no posee** la superficie: recibe un *surface abstraction* (de `rivet-window` u otro origen) e intercambia buffers.
-- Con `wl_shm` (v1) el resultado se copia al buffer compartido (hay copia, ver `rivet-window` §5). Con DMA-BUF (v1.x) se exporta con **`EGL_MESA_image_dma_buf_export`**.
-- `PresentSynchronizer` pacea con `eglSwapInterval` y el frame callback del compositor.
+- Canvas does **not** own the surface: it receives a *surface abstraction* (from `rivet-window` or another source) and swaps buffers.
+- With `wl_shm` (v1) the result is copied to the shared buffer (a copy exists, see `rivet-window` §5). With DMA-BUF (v1.x) it is exported with **`EGL_MESA_image_dma_buf_export`**.
+- `PresentSynchronizer` paces with `eglSwapInterval` and the compositor's frame callback.
 
-## 8. Telemetría
+## 8. Telemetry
 
-`FrameStats`: tiempo de CPU por fase, tiempo de GPU (si hay `EXT_disjoint_timer_query`), contadores de *draw calls*, texturas subidas, glifos rasterizados. Base del **protocolo de medición** (`../RIVET.md` §14).
+`FrameStats`: CPU time per phase, GPU time (if `EXT_disjoint_timer_query` is available), *draw call* counters, textures uploaded, glyphs rasterized. Basis of the **measurement protocol** (`../RIVET.md` §14).
 
-## 9. Dependencias
+## 9. Dependencies
 
-- **Rust:** binding GL/EGL y math (`glam`/similar).
-- **C de sistema (allowlist):** driver GL/EGL (`libEGL`, `libGL`).
-- **Sin GTK/Qt.**
+- **Rust:** GL/EGL bindings and math (`glam`/similar).
+- **System C (allowlist):** GL/EGL drivers (`libEGL`, `libGL`).
+- **No GTK/Qt.**
 
-## 10. Alcance
+## 10. Scope
 
-**v1:** GL 3.3 Core, rects/formas básicas, texto por atlas, texturas, blending, transformaciones 2D, FBO para composición y blur, `FrameStats`.
+**v1:** GL 3.3 Core, basic rects/shapes, text via atlas, textures, blending, 2D transforms, FBOs for composition and blur, `FrameStats`.
 
-**v1.x (por medición):** DMA-BUF export, compute opcional, MSAA, capas y efectos avanzados.
+**v1.x (based on measurement):** DMA-BUF export, optional compute, MSAA, advanced layers and effects.
 
-**Fuera de v1:** Vulkan, 3D, ray tracing, post-proceso pesado.
+**Out of v1:** Vulkan, 3D, ray tracing, heavy post-processing.
 
-## 11. Decisiones y correcciones aplicadas
+## 11. Decisions and corrections applied
 
-- Export DMA-BUF = **`EGL_MESA_image_dma_buf_export`** (corregido).
-- Compute **opcional** y **solo GL 4.3+**; v1 usa FBO ping-pong para blur (ADR-07).
-- Contexto con `EGL_CONTEXT_MAJOR_VERSION`/`MINOR_VERSION`.
-- VSync con `eglSwapInterval`.
-- VRAM por glifo en **KB** (no MB).
-- Se elimina la promesa "0% de CPU durante el render": el render **cuesta** CPU/GPU y se mide (ADR-08).
-- **canvas no depende de window.**
+- DMA-BUF export = **`EGL_MESA_image_dma_buf_export`** (corrected).
+- Compute is **optional** and **GL 4.3+ only**; v1 uses FBO ping-pong for blur (ADR-07).
+- Context created with `EGL_CONTEXT_MAJOR_VERSION`/`MINOR_VERSION`.
+- VSync with `eglSwapInterval`.
+- VRAM per glyph in **KB** (not MB).
+- The "0% CPU during render" claim is removed: rendering **costs** CPU/GPU and is measured (ADR-08).
+- **canvas does not depend on window.**
 
-## 12. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 12. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-FPS sostenidos en reposo/anima, ms de CPU por frame, ms de GPU por frame, draw calls, pico de VRAM, tiempo de subida de textura, coste del blur. Método: `FrameStats` + `perf` + queries de GPU.
+Sustained FPS at rest/under animation, CPU ms per frame, GPU ms per frame, draw calls, VRAM peak, texture upload time, blur cost. Method: `FrameStats` + `perf` + GPU queries.

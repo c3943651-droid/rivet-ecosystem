@@ -1,42 +1,42 @@
-# rivet-foundation — Documentación definitiva
+# rivet-foundation — Definitive documentation
 
-> Parte del ecosistema **Rivet**. La visión global, los principios, las decisiones de arquitectura (ADR) y la política de medición están en **`../RIVET.md`** (documento paraguas, autoridad raíz). Este documento es la **especificación definitiva** del subsistema y sustituye a toda la documentación anterior de `rivet-foundation`.
+> Part of the **Rivet** ecosystem. The overall vision, principles, architecture decisions (ADRs), and the measurement policy are in **`../RIVET.md`** (umbrella document, root authority). This document is the **definitive specification** of the subsystem and supersedes all previous documentation of `rivet-foundation`.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Rol:** núcleo del ecosistema. **Nivel más bajo**, sin dependencias internas.
-- **Reemplaza a:** GLib + parte de GObject.
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Role:** core of the ecosystem. **Lowest layer**, no internal dependencies.
+- **Replaces:** GLib + part of GObject.
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-`rivet-foundation` es la base sobre la que se construyen todas las demás crates. Aporta tres cosas:
+`rivet-foundation` is the base on which all other crates are built. It provides three things:
 
-1. **Memoria:** un *slab allocator* con generaciones; el almacén de objetos del ecosistema.
-2. **Eventos:** un bucle de eventos sobre `epoll` (temporizadores, señales, E/S) que mantiene el proceso **bloqueado** en reposo.
-3. **Servicios comunes:** configuración, errores/logging, utilidades (tiempo, IDs, endianness).
+1. **Memory:** a generational *slab allocator*; the ecosystem's object store.
+2. **Events:** an event loop over `epoll` (timers, signals, I/O) that keeps the process **blocked** while idle.
+3. **Common services:** configuration, errors/logging, utilities (time, IDs, endianness).
 
-**No** es un framework de UI ni conoce el dominio gráfico; solo provee los cimientos.
+It is **not** a UI framework and knows nothing of the graphics domain; it only provides the foundations.
 
-## 2. Componentes
+## 2. Components
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 |---|---|
-| `slab` | Slab allocator con generaciones e IDs de 64 bits. |
-| `event_loop` | Bucle de eventos `epoll`: descriptores, `timerfd`, `signalfd`, despacho. |
-| `config` | Configuración TOML tipada + hot-reload. |
-| `error` / `log` | `FoundationError`, niveles de log, canales, gancho de pánico. |
-| `utils` | `Clock` monotónico, macros, helpers de IDs/UTF-8/endianness, utilidades de test. |
+| `slab` | Slab allocator with generations and 64-bit IDs. |
+| `event_loop` | `epoll` event loop: descriptors, `timerfd`, `signalfd`, dispatch. |
+| `config` | Typed TOML configuration + hot-reload. |
+| `error` / `log` | `FoundationError`, log levels, sinks, panic hook. |
+| `utils` | Monotonic `Clock`, macros, ID/UTF-8/endianness helpers, test utilities. |
 
-Actores internos: `EpollWrapper`, `TimerManager`, `SignalManager`, `EventDispatcher`, `ConfigLoader`, `ConfigWatcher`, `ConfigNotifier`, `Logger`.
+Internal actors: `EpollWrapper`, `TimerManager`, `SignalManager`, `EventDispatcher`, `ConfigLoader`, `ConfigWatcher`, `ConfigNotifier`, `Logger`.
 
-## 3. Slab allocator (decisión cerrada)
+## 3. Slab allocator (closed decision)
 
 ```rust
 struct Slab<T> {
-    entries: Vec<Entry<T>>,   // vector plano y contiguo
-    free_list: Vec<usize>,    // índices de slots libres
+    entries: Vec<Entry<T>>,   // flat, contiguous vector
+    free_list: Vec<usize>,    // indices of free slots
 }
 struct Entry<T> {
     generation: u32,
@@ -44,37 +44,37 @@ struct Entry<T> {
 }
 ```
 
-**ID de 64 bits** (ADR de `../RIVET.md` §7): bits `0..31` = índice, `32..63` = generación. `id = (gen << 32) | index`.
+**64-bit ID** (ADR in `../RIVET.md` §7): bits `0..31` = index, `32..63` = generation. `id = (gen << 32) | index`.
 
-**Operaciones:** `insert(value) -> Id`, `get(id)`, `get_mut(id)`, `remove(id) -> Option<T>`, iteración sobre ocupados, `clear()`. Todas O(1) salvo la iteración (O(n)).
+**Operations:** `insert(value) -> Id`, `get(id)`, `get_mut(id)`, `remove(id) -> Option<T>`, iteration over occupied slots, `clear()`. All O(1) except iteration (O(n)).
 
-**Reglas:**
-- `remove` no incrementa la generación; `insert` que reutiliza un slot **sí** la incrementa → los IDs viejos quedan invalidados (evita *use-after-free* silencioso).
-- Validación: límites + coincidencia de generación + slot ocupado.
-- Reutilización de slots vía `free_list` (LIFO) para conservar localidad.
+**Rules:**
+- `remove` does not increment the generation; an `insert` that reuses a slot **does** increment it → old IDs are invalidated (avoids silent *use-after-free*).
+- Validation: bounds + generation match + occupied slot.
+- Slot reuse via `free_list` (LIFO) to preserve locality.
 
-> El tamaño de `Entry<T>` es `~4 + size_of::<Option<T>>()` (p. ej. ~24 B con un `T` de 16 B). Es el **overhead de la entrada del slab**, distinto del tamaño del objeto de dominio (ver `rivet-ui`).
+> The size of `Entry<T>` is `~4 + size_of::<Option<T>>()` (e.g. ~24 B with a 16 B `T`). This is the **slab entry overhead**, distinct from the size of the domain object (see `rivet-ui`).
 
-## 4. Bucle de eventos
+## 4. Event loop
 
-- **`epoll`** en modo *level-triggered* (simple y predecible). `epoll_create1` + `epoll_ctl` (ADD/MOD/DEL) + `epoll_wait` (con `timeout` en ms; `-1` = bloquear).
-- **Temporizadores** vía `timerfd` (único disparo o periódico), integrados en `epoll`.
-- **Señales** vía `signalfd`: se bloquean con `sigprocmask` y se entregan como descriptor legible (sin manejadores asíncronos inseguros).
-- **Despacho** por lotes (`max_events_per_iteration`, por defecto 64), en el mismo hilo.
+- **`epoll`** in *level-triggered* mode (simple and predictable). `epoll_create1` + `epoll_ctl` (ADD/MOD/DEL) + `epoll_wait` (with `timeout` in ms; `-1` = block).
+- **Timers** via `timerfd` (one-shot or periodic), integrated into `epoll`.
+- **Signals** via `signalfd`: blocked with `sigprocmask` and delivered as a readable descriptor (no unsafe async handlers).
+- **Dispatch** in batches (`max_events_per_iteration`, default 64), on the same thread.
 - **API:** `register_fd`, `unregister_fd`, `add_timer`, `run`, `quit`, `post_event`.
 
-**Reposo:** con `epoll_wait(..., -1)` el proceso queda **dormido** hasta que llega un evento; el consumo de CPU en reposo tiende a ~0. Esto es un **objetivo a medir**, no una promesa publicada (política "medido, no prometido", `../RIVET.md` §14).
+**Idle behavior:** with `epoll_wait(..., -1)` the process stays **asleep** until an event arrives; idle CPU usage tends toward ~0. This is a **target to be measured**, not a published promise ("measured, not promised" policy, `../RIVET.md` §14).
 
-## 5. Configuración
+## 5. Configuration
 
-- Formato **TOML**, estructura tipada con valores por defecto.
-- **Decisión:** se usa **`serde` + `toml`** (ambos Rust puro; la política de dependencias de `../RIVET.md` §6 los permite). La versión anterior decía hacerlo "a mano"; se simplifica.
-- Prioridad: `~/.config/rivet/config.toml` + defaults (ruta configurable en el builder).
-- **Hot-reload** vía `inotify` registrado en `epoll` (cooldown sugerido 100 ms); si el parseo falla, se conserva la configuración anterior y se avisa.
+- **TOML** format, typed structure with default values.
+- **Decision:** **`serde` + `toml`** are used (both pure Rust; allowed by the dependency policy of `../RIVET.md` §6). The previous version required a hand-written parser; this is simplified.
+- Priority: `~/.config/rivet/config.toml` + defaults (path configurable in the builder).
+- **Hot-reload** via `inotify` registered in `epoll` (suggested cooldown 100 ms); if parsing fails, the previous configuration is kept and a warning is logged.
 
-Secciones típicas: `[core]` (capacidad del slab), `[event_loop]` (timeout, lote), `[logging]`, `[paths]`.
+Typical sections: `[core]` (slab capacity), `[event_loop]` (timeout, batch), `[logging]`, `[paths]`.
 
-## 6. Errores y logging
+## 6. Errors and logging
 
 ```rust
 pub enum FoundationError {
@@ -86,19 +86,19 @@ pub enum FoundationError {
 }
 ```
 
-- Toda operación pública falible devuelve `Result<T, FoundationError>`.
-- Errores recuperables → `Result`; condiciones que indican bug → `panic!`.
-- Un error dentro de un handler **se registra** y no detiene el bucle.
-- Logging con niveles `Error`/`Warn`/`Info`/`Debug`/`Trace`, canales `stderr` y archivo, formato `[NIVEL] [TIMESTAMP] [MÓDULO] [MENSAJE]`. Gancho de pánico que registra diagnóstico.
+- Every fallible public operation returns `Result<T, FoundationError>`.
+- Recoverable errors → `Result`; conditions that indicate a bug → `panic!`.
+- An error inside a handler is **logged** and does not stop the loop.
+- Logging with levels `Error`/`Warn`/`Info`/`Debug`/`Trace`, `stderr` and file sinks, format `[LEVEL] [TIMESTAMP] [MODULE] [MESSAGE]`. Panic hook that logs diagnostics.
 
-## 7. Utilidades
+## 7. Utilities
 
-- **`Clock`** sobre `clock_gettime(CLOCK_MONOTONIC)`: `now_nanos/micros/millis/secs`, `elapsed`.
-- **Macros**: `error!`/`warn!`/`info!`/`debug!`/`trace!` (se compilan a vacío si el nivel está desactivado), aserciones de test, helpers de bits de IDs (`make_id!`, `id_index!`, `id_generation!`).
-- **Helpers**: validación/creación de IDs, `truncate_utf8`, conversión de endianness (necesaria para Wayland/TrueType).
-- **Test/simulación**: generadores de datos de prueba, `MockClock` con `advance`.
+- **`Clock`** over `clock_gettime(CLOCK_MONOTONIC)`: `now_nanos/micros/millis/secs`, `elapsed`.
+- **Macros**: `error!`/`warn!`/`info!`/`debug!`/`trace!` (compiled to nothing if the level is disabled), test assertions, ID bit helpers (`make_id!`, `id_index!`, `id_generation!`).
+- **Helpers**: ID validation/creation, `truncate_utf8`, endianness conversion (needed for Wayland/TrueType).
+- **Test/simulation**: test data generators, `MockClock` with `advance`.
 
-## 8. Contexto e integración
+## 8. Context and integration
 
 ```rust
 pub struct Context {
@@ -110,34 +110,34 @@ pub struct Context {
 }
 ```
 
-- Se crea con `ContextBuilder::build()`.
-- **Inyección de dependencias explícita** (sin singletons): cada crate recibe `&Context`/`&mut Context`.
-- Flujo típico: construir contexto → cargar config → registrar módulos de las otras crates → `event_loop.run()`.
+- Created with `ContextBuilder::build()`.
+- **Explicit dependency injection** (no singletons): each crate receives `&Context`/`&mut Context`.
+- Typical flow: build context → load config → register modules from the other crates → `event_loop.run()`.
 
-**Orden de dependencias** (quién usa a quién): todo el ecosistema depende de `rivet-foundation`; `rivet-foundation` no depende de nadie del ecosistema.
+**Dependency order** (who uses whom): the whole ecosystem depends on `rivet-foundation`; `rivet-foundation` depends on nothing in the ecosystem.
 
-## 9. Dependencias
+## 9. Dependencies
 
-- **Rust puro:** `std`, `serde` + `toml` (config).
-- **C de sistema (allowlist):** `libc` (syscalls: `epoll`, `timerfd`, `signalfd`, `inotify`, `memfd_create`, `clock_gettime`, `sigprocmask`).
-- **No C de GUI.**
+- **Pure Rust:** `std`, `serde` + `toml` (config).
+- **System C (allowlist):** `libc` (syscalls: `epoll`, `timerfd`, `signalfd`, `inotify`, `memfd_create`, `clock_gettime`, `sigprocmask`).
+- **No GUI C.**
 
-## 10. Alcance
+## 10. Scope
 
-**v1:** slab, bucle de eventos (`epoll`/`timerfd`/`signalfd`), config TOML + hot-reload, errores/logging, utilidades, `Context`.
+**v1:** slab, event loop (`epoll`/`timerfd`/`signalfd`), TOML config + hot-reload, errors/logging, utilities, `Context`.
 
-**Fuera de v1 (horizonte):** variables de entorno en la config, logging JSON estructurado, trace IDs, integración de hilos secundarios vía canales (v1.1), múltiples contextos independientes (v2), alineación de memoria personalizada, soporte multi-SO/ARM64.
+**Out of v1 (horizon):** environment variables in config, structured JSON logging, trace IDs, secondary-thread integration via channels (v1.1), multiple independent contexts (v2), custom memory alignment, multi-OS/ARM64 support.
 
-## 11. Decisiones y correcciones aplicadas
+## 11. Decisions and applied corrections
 
-- IDs de **64 bits** (32 índice + 32 generación) — coherente con `../RIVET.md` §7.
-- Se admite `serde`/`toml` (Rust puro); no se exige parsear TOML a mano.
-- **No** se publica "0% de CPU" como dato: el reposo bloqueado en `epoll` es un mecanismo; la cifra se mide (ADR-08).
+- **64-bit** IDs (32 index + 32 generation) — consistent with `../RIVET.md` §7.
+- `serde`/`toml` are accepted (pure Rust); hand-written TOML parsing is not required.
+- **No** "0% CPU" figure is published: blocking on `epoll` while idle is a mechanism; the number is measured (ADR-08).
 
-## 12. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 12. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-Todas son **objetivos sin verificar**: inserción/`get`/`remove` en decenas de ns, iteración de 10k objetos, latencia de despacho de evento, RAM del contexto vacío, tiempo de inicialización. Método previsto: `criterion`, `perf`, `/proc/<pid>/status`.
+All are **unverified targets**: insert/`get`/`remove` in tens of ns, iteration over 10k objects, event dispatch latency, RAM of an empty context, initialization time. Planned method: `criterion`, `perf`, `/proc/<pid>/status`.
 
-## 13. Ideas preservadas (del diseño previo)
+## 13. Preserved ideas (from the previous design)
 
-Memoria plana sin fragmentación · acceso por índice con generaciones · complejidades definidas y predecibles · inyección de dependencias sin globales · errores con contexto y recuperación · minimizar dependencias externas · "fallo seguro".
+Flat memory without fragmentation · index access with generations · defined and predictable complexities · dependency injection without globals · errors with context and recovery · minimize external dependencies · "fail safe".

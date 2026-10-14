@@ -1,27 +1,27 @@
-# rivet-ui — Documentación definitiva
+# rivet-ui — Definitive documentation
 
-Subsistema de **widgets y UI** de Rivet.
+**Widgets and UI** subsystem of Rivet.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Capa:** 4 (nivel más alto del toolkit)
-- **Depende de:** `rivet-foundation`, `rivet-canvas`, `rivet-typography`, `rivet-style`, `rivet-image`, `rivet-window` (eventos).
-- **Reemplaza a:** el nivel de widgets de GTK (`GtkWidget`, cajas, botones, etc.).
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Layer:** 4 (highest level of the toolkit)
+- **Depends on:** `rivet-foundation`, `rivet-canvas`, `rivet-typography`, `rivet-style`, `rivet-image`, `rivet-window` (events).
+- **Replaces:** the GTK widget level (`GtkWidget`, boxes, buttons, etc.).
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-Construir la **jerarquía de widgets**, enrutar eventos, gestionar foco, medir y posicionar (layout), y ordenar el dibujo. `rivet-ui` es la capa que el desarrollador de apps usa directamente.
+Build the **widget hierarchy**, route events, manage focus, measure and position (layout), and order drawing. `rivet-ui` is the layer that application developers use directly.
 
-## 2. Almacén de widgets (ADR-03)
+## 2. Widget store (ADR-03)
 
-**Corrección de diseño:** NO se usa un slab homogéneo que fuerce un `enum` gigante de todos los tipos de widget. En su lugar:
+**Design correction:** a homogeneous slab forcing one giant `enum` of all widget kinds is NOT used. Instead:
 
-- Un **nodo común** `WidgetNode` con los datos compartidos por todos los widgets:
-  - `id: WidgetId`, `parent`, `first_child`/`last_child`, `next_sibling`/`prev_sibling`, `kind: WidgetKind`, bits de estado, layout flags, geometría calculada.
-- **Slabs por tipo** (uno por clase de widget: `ButtonSlab`, `LabelSlab`, `ContainerSlab`, ...) que guardan **solo los datos específicos** de cada tipo.
+- One **common node** `WidgetNode` with the data shared by all widgets:
+  - `id: WidgetId`, `parent`, `first_child`/`last_child`, `next_sibling`/`prev_sibling`, `kind: WidgetKind`, state bits, layout flags, computed geometry.
+- **Per-type slabs** (one per widget class: `ButtonSlab`, `LabelSlab`, `ContainerSlab`, ...) that store **only the type-specific** data of each kind.
 
 ```rust
 pub struct WidgetNode {
@@ -33,46 +33,46 @@ pub struct WidgetNode {
     pub prev_sibling: Option<WidgetId>,
     pub kind: WidgetKind,
     pub state: WidgetStateBits,
-    pub rect: Rect,        // posición/tamaño resueltos por layout
+    pub rect: Rect,        // position/size resolved by layout
 }
-// Un slab por tipo:
+// One slab per type:
 struct ButtonSlab { entries: Vec<Entry<ButtonData>> }
-// ...uno por cada tipo de widget
+// ...one for each widget kind
 ```
 
-- **Ventaja:** el nodo común es pequeño y homogéneo; los datos específicos viven en slabs tipados sin *padding* por el widget más grande.
-- **Corrección:** se retira la cifra aislada de "24 bytes por widget" — el coste real es `WidgetNode` + entrada del slab del tipo + datos del widget. Se **mide** (ver §15).
+- **Advantage:** the common node is small and homogeneous; type-specific data lives in typed slabs without *padding* imposed by the largest widget.
+- **Correction:** the isolated figure of "24 bytes per widget" is withdrawn — the actual cost is `WidgetNode` + the type's slab entry + the widget's data. It is **measured** (see §15).
 
-## 3. Hijos: enlaces intrusivos (ADR-04)
+## 3. Children: intrusive links (ADR-04)
 
-- La relación padre↔hijo se modela con **enlaces intrusivos** (`first_child`/`last_child` + `next_sibling`/`prev_sibling`), **no** con `Vec<WidgetId>` por nodo.
-- Ventajas: sin `Vec` por nodo (menos asignaciones, menos fragmentación), relaciones O(1), recorrido predecible.
-- Insertar/quitar un hijo es O(1). El orden de hijos es el orden de inserción (o reordenable por enlace).
+- The parent↔child relationship is modeled with **intrusive links** (`first_child`/`last_child` + `next_sibling`/`prev_sibling`), **not** with a `Vec<WidgetId>` per node.
+- Advantages: no per-node `Vec` (fewer allocations, less fragmentation), O(1) relations, predictable traversal.
+- Inserting/removing a child is O(1). Child order is insertion order (or reorderable via links).
 
-## 4. Identidad
+## 4. Identity
 
-- **`WidgetId` = 64 bits**: 32 bits índice + 32 bits generación (coherente con `rivet-foundation`).
-- El acceso es por ID validado contra generación → detecta *use-after-free*.
+- **`WidgetId` = 64 bits:** 32-bit index + 32-bit generation (consistent with `rivet-foundation`).
+- Access is by ID validated against the generation → detects *use-after-free*.
 
-## 5. Componentes
+## 5. Components
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 |---|---|
-| `widget` | `WidgetNode`, tipos concretos, árbol. |
-| `registry` | `WidgetRegistry`: alta/baja, validación de IDs. |
-| `event` | `EventManager` / `EventDispatcher`: enrutado y *bubbling*. |
-| `hit` | `HitTester`: de coordenada → widget (recorrido del árbol de atrás hacia delante). |
-| `focus` | `FocusManager`: foco por teclado, tab-order, foco por puntero. |
-| `layout` | Medición + posicionamiento (box model / constraints). |
-| `render` | Recorre el árbol y emite comandos a `rivet-canvas`. |
-| `builder` | DSL/constructor declarativo de jerarquía. |
+| `widget` | `WidgetNode`, concrete types, tree. |
+| `registry` | `WidgetRegistry`: registration/unregistration, ID validation. |
+| `event` | `EventManager` / `EventDispatcher`: routing and *bubbling*. |
+| `hit` | `HitTester`: from coordinate → widget (back-to-front tree traversal). |
+| `focus` | `FocusManager`: keyboard focus, tab order, pointer focus. |
+| `layout` | Measuring + positioning (box model / constraints). |
+| `render` | Traverses the tree and emits commands to `rivet-canvas`. |
+| `builder` | Declarative DSL/builder for the hierarchy. |
 | `error` | `UiError`. |
 
-## 6. Registro
+## 6. Registry
 
 ```rust
 pub type WidgetId = u64;
-pub struct WidgetRegistry { /* nodos + slabs por tipo */ }
+pub struct WidgetRegistry { /* nodes + per-type slabs */ }
 impl WidgetRegistry {
     pub fn create(&mut self, kind: WidgetKind) -> WidgetId;
     pub fn destroy(&mut self, id: WidgetId);
@@ -82,66 +82,66 @@ impl WidgetRegistry {
 }
 ```
 
-## 7. Eventos
+## 7. Events
 
-- `rivet-window` entrega `InputEvent`; `rivet-ui` los convierte a eventos de widget.
-- **Fases:** *capture* (raíz→hoja) → *target* → *bubble* (hoja→raíz), con posibilidad de detener propagación.
-- **Hit-testing:** por geometría + z-order (hijos al frente); respeta `pointer-events`/regiones.
-- **Foco:** `FocusManager` mantiene el widget enfocado, el orden `Tab`, y el foco por puntero; los eventos de teclado van al foco.
+- `rivet-window` delivers `InputEvent`; `rivet-ui` converts them to widget events.
+- **Phases:** *capture* (root→leaf) → *target* → *bubble* (leaf→root), with the ability to stop propagation.
+- **Hit-testing:** by geometry + z-order (children in front); respects `pointer-events`/regions.
+- **Focus:** `FocusManager` tracks the focused widget, `Tab` order, and pointer focus; keyboard events go to the focus.
 
 ## 8. Layout
 
-- Modelo tipo **caja** (padding/border/margin) con tamaños min/preferido/expandible.
-- Contenedores: `Box` (horizontal/vertical), `Grid`, `Overlay`, `ScrollView`, alineación y espaciado.
-- **Dos pasadas:** medir (tamaños deseados) → posicionar (asignar rects). v1 es *single-pass* simplificado; layout constraints avanzados en v1.x.
-- Texto: consulta métricas de `rivet-typography` para medir.
+- **Box** model (padding/border/margin) with min/preferred/expandable sizes.
+- Containers: `Box` (horizontal/vertical), `Grid`, `Overlay`, `ScrollView`, alignment and spacing.
+- **Two passes:** measure (desired sizes) → position (assign rects). v1 is a simplified *single-pass*; advanced layout constraints in v1.x.
+- Text: queries `rivet-typography` metrics for measuring.
 
-## 9. Dibujo
+## 9. Drawing
 
-- Recorrido en orden de árbol, saltando lo no visible/`clip`.
-- Por widget: consulta estilo (`rivet-style`), estado, y emite comandos ordenados a `rivet-canvas`.
-- Redibujado por **dirty regions** (invalidar solo lo que cambió) para no repintar todo — objetivo medible.
+- In-order tree traversal, skipping the non-visible/`clip`.
+- Per widget: queries style (`rivet-style`), state, and emits ordered commands to `rivet-canvas`.
+- Repaint by **dirty regions** (invalidate only what changed) to avoid repainting everything — a measurable target.
 
-## 10. API pública (orientativa)
+## 10. Public API (indicative)
 
 ```rust
 pub struct Widget;
 pub struct Button; pub struct Label; pub struct Box_; pub struct TextInput;
-pub struct Application;                 // ciclo init/run/quit
+pub struct Application;                 // init/run/quit cycle
 pub enum UiEvent { Pointer(..), Key(..), .. }
 ```
 
-El usuario de la crate: crea widgets, los anida, conecta señales/callbacks, y ejecuta el bucle.
+Crate users: create widgets, nest them, connect signals/callbacks, and run the loop.
 
-## 11. Widgets v1
+## 11. v1 widgets
 
-`Container`/`Box`, `Button`, `Label`, `Image`, `TextInput`, `List`/`Scroll`, `Panel`/superficie (para apps semilla: panel y lanzador). Catálogo crece en v1.x.
+`Container`/`Box`, `Button`, `Label`, `Image`, `TextInput`, `List`/`Scroll`, `Panel`/surface (for seed apps: panel and launcher). The catalog grows in v1.x.
 
-## 12. Dependencias
+## 12. Dependencies
 
-- Internas: foundation, canvas, typography, style, image, window.
-- **Rust puro** + C de sistema ya permitido por las capas inferiores.
+- Internal: foundation, canvas, typography, style, image, window.
+- **Pure Rust** + system C already permitted by the lower layers.
 
-## 13. Alcance
+## 13. Scope
 
-**v1:** almacén (nodo + slabs), hijos intrusivos, IDs 64 bits, registro, hit-test, foco, enrutado con capture/bubble, layout básico (box/list), widgets esenciales, redibujado por daño incremental.
+**v1:** store (node + slabs), intrusive children, 64-bit IDs, registry, hit-test, focus, capture/bubble routing, basic layout (box/list), essential widgets, incremental-damage repaint.
 
-**v1.x (por medición):** más widgets, layout tipo flex/grid completo, accesibilidad (roles, `AT-SPI`), IME, drag & drop de alto nivel, animaciones de layout.
+**v1.x (pending measurement):** more widgets, full flex/grid-style layout, accessibility (roles, `AT-SPI`), IME, high-level drag & drop, layout animations.
 
-**Fuera de v1:** motor de estilos completo (ver `rivet-style`), X11/XWayland, bindings multi-lenguaje.
+**Out of v1:** the full style engine (see `rivet-style`), X11/XWayland, multi-language bindings.
 
-## 14. Decisiones y correcciones aplicadas
+## 14. Decisions and applied corrections
 
-- **`WidgetNode` + slabs por tipo** (ADR-03); se retira el "almacén homogéneo con `Vec<WidgetId>` de hijos".
-- **Hijos por enlaces intrusivos** (ADR-04).
-- **IDs de 64 bits** (ADR de §7 del paraguas).
-- Se retira la cifra "24 bytes por widget" (ADR-08): depende del tipo; se mide.
-- Sin afirmaciones de "0% CPU".
+- **`WidgetNode` + per-type slabs** (ADR-03); the "homogeneous store with `Vec<WidgetId>` of children" is withdrawn.
+- **Children via intrusive links** (ADR-04).
+- **64-bit IDs** (ADR of §7 of the umbrella document).
+- The "24 bytes per widget" figure is withdrawn (ADR-08): it depends on the kind; it is measured.
+- No "0% CPU" claims.
 
-## 15. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 15. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-ns de `create`/`destroy`/`add_child`, ns de hit-test sobre N widgets, µs de layout de un árbol típico, RAM por widget (por tipo), eventos/s despachados, coste del daño incremental. Método: `criterion` + `heaptrack` + `FrameStats`.
+ns of `create`/`destroy`/`add_child`, ns of hit-test over N widgets, µs of layout of a typical tree, RAM per widget (per kind), events/s dispatched, cost of incremental damage. Method: `criterion` + `heaptrack` + `FrameStats`.
 
-## 16. Ideas preservadas (del diseño previo)
+## 16. Preserved ideas (from the previous design)
 
-`WidgetRegistry` como autoridad de creación · eventos con fases capture/bubble · `HitTester` geométrico · `FocusManager` separado · layout declarativo · separación estricta entre estado, estilo y dibujo.
+`WidgetRegistry` as the creation authority · events with capture/bubble phases · geometric `HitTester` · separate `FocusManager` · declarative layout · strict separation between state, style, and drawing.

@@ -1,122 +1,122 @@
-# rivet-window — Documentación definitiva
+# rivet-window — Definitive documentation
 
-Subsistema de **ventanas y superficies Wayland** de Rivet.
+**Window and Wayland surface** subsystem of Rivet.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Capa:** 2 (comunicación con el sistema de ventanas)
-- **Depende de:** `rivet-foundation`
-- **Consumido por:** `rivet-canvas`, `rivet-ui`
-- **Reemplaza a:** parte de GTK y librerías de ventanas.
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Layer:** 2 (communication with the window system)
+- **Depends on:** `rivet-foundation`
+- **Consumed by:** `rivet-canvas`, `rivet-ui`
+- **Replaces:** part of GTK and windowing libraries.
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-`rivet-window` gestiona el ciclo de vida de ventanas y superficies sobre **Wayland** (con **`libxkbcommon`** para teclado). Entrega a `rivet-canvas` una **superficie lista para renderizar** y **buffers**; **no** dibuja, **no** conoce píxeles ni widgets. Es la frontera del ecosistema con el compositor.
+`rivet-window` manages the lifecycle of windows and surfaces on **Wayland** (with **`libxkbcommon`** for keyboard). It hands `rivet-canvas` a **surface ready for rendering** and **buffers**; it does **not** draw, and it knows nothing about pixels or widgets. It is the ecosystem's boundary with the compositor.
 
-Regla de separación (ADR de `../RIVET.md`): **`rivet-window` entrega superficie/buffer a `rivet-canvas`; `rivet-canvas` NO depende de `rivet-window`.** El render recibe un `wgpu`/EGL surface abstracto, no un objeto de ventana.
+Separation rule (ADR in `../RIVET.md`): **`rivet-window` hands surface/buffer to `rivet-canvas`; `rivet-canvas` does NOT depend on `rivet-window`.** Rendering receives an abstract `wgpu`/EGL surface, not a window object.
 
-## 2. Componentes
+## 2. Components
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 |---|---|
-| `connection` | Conexión al compositor, `wl_registry`, handshake. |
-| `surface` | `wl_surface` + rol (toplevel / layer-shell / popup / subsurface). |
-| `buffer` | Buffer de píxeles: `wl_shm` (v1) y DMA-BUF (v1.x). |
-| `input` | Teclado (`xkbcommon`), puntero, touch, gestos. |
-| `window` | Objeto `Window`: estado, tamaño, decoraciones, visibilidad. |
-| `display` | Salidas, HiDPI/escala, vsync, modos. |
-| `frame` | Sincronización de frames (`wl_callback`). |
-| `clipboard` | Selección y *drag & drop*. |
+| `connection` | Connection to the compositor, `wl_registry`, handshake. |
+| `surface` | `wl_surface` + role (toplevel / layer-shell / popup / subsurface). |
+| `buffer` | Pixel buffer: `wl_shm` (v1) and DMA-BUF (v1.x). |
+| `input` | Keyboard (`xkbcommon`), pointer, touch, gestures. |
+| `window` | `Window` object: state, size, decorations, visibility. |
+| `display` | Outputs, HiDPI/scale, vsync, modes. |
+| `frame` | Frame synchronization (`wl_callback`). |
+| `clipboard` | Selection and *drag & drop*. |
 | `error` | `WindowError`. |
 
-## 3. Conexión y handshake
+## 3. Connection and handshake
 
-1. `wl_display_connect` → `wl_display_get_registry` → escuchar `wl_registry.global`/`global_remove`.
-2. `wl_display_roundtrip` para enumerar globals.
-3. Adquirir **enlaces** (`wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`, `zxdg_output_manager_v1`, `zwp_layer_shell_v1`, `wp_viewporter`, `zwp_linux_dmabuf_v1` si está).
-4. Verificar versión mínima de cada interfaz; degradar con elegancia si falta una opcional (p. ej. sin `xdg_wm_base` no hay toplevels).
-5. Integrar el fd de Wayland en el bucle `epoll` de `rivet-foundation`.
+1. `wl_display_connect` → `wl_display_get_registry` → listen for `wl_registry.global`/`global_remove`.
+2. `wl_display_roundtrip` to enumerate globals.
+3. Acquire **bindings** (`wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`, `zxdg_output_manager_v1`, `zwp_layer_shell_v1`, `wp_viewporter`, `zwp_linux_dmabuf_v1` if present).
+4. Check the minimum version of each interface; degrade gracefully if an optional one is missing (e.g. without `xdg_wm_base` there are no toplevels).
+5. Integrate the Wayland fd into the `epoll` event loop of `rivet-foundation`.
 
-## 4. Rol de la superficie
+## 4. Surface role
 
-- **Toplevel** (`xdg_toplevel`): ventana normal; título, tamaño, estados (maximizado, fullscreen, activo).
-- **Layer-shell** (`zwp_layer_shell_v1`): superficies ancladas — **base para el panel y el lanzador** de las apps semilla.
-- **Popup** (`xdg_popup`): menús y tooltips, posicionados por `xdg_positioner`.
-- **Subsurface** (`wl_subsurface`): composición dentro de otra superficie.
+- **Toplevel** (`xdg_toplevel`): normal window; title, size, states (maximized, fullscreen, activated).
+- **Layer-shell** (`zwp_layer_shell_v1`): anchored surfaces — **base for the panel and launcher** of the seed applications.
+- **Popup** (`xdg_popup`): menus and tooltips, positioned via `xdg_positioner`.
+- **Subsurface** (`wl_subsurface`): composition inside another surface.
 
-## 5. Buffers — **corrección importante**
+## 5. Buffers — **important correction**
 
-Hay dos caminos, y no son equivalentes:
+There are two paths, and they are not equivalent:
 
-- **`wl_shm` (v1):** buffer en memoria compartida. El cliente escribe píxeles en la CPU y el compositor los toma. **NO es zero-copy**: hay una copia por frame. Simple y universal; es la base de v1.
-- **DMA-BUF (`zwp_linux_dmabuf_v1`, v1.x):** buffer de GPU compartido entre cliente y compositor. **Este sí es el camino zero-copy.** Se exporta desde GL con **`EGL_MESA_image_dma_buf_export`** (NO `EGL_EXT_image_dma_buf_import`, que importa *hacia* GL). Requiere **sincronización explícita** (`linux-drm-syncobj-v1`) para evitar *tearing*/condiciones de carrera.
+- **`wl_shm` (v1):** buffer in shared memory. The client writes pixels on the CPU and the compositor consumes them. **This is NOT zero-copy**: there is one copy per frame. Simple and universal; it is the v1 baseline.
+- **DMA-BUF (`zwp_linux_dmabuf_v1`, v1.x):** GPU buffer shared between client and compositor. **This is the zero-copy path.** It is exported from GL with **`EGL_MESA_image_dma_buf_export`** (NOT `EGL_EXT_image_dma_buf_import`, which imports *into* GL). It requires **explicit synchronization** (`linux-drm-syncobj-v1`) to avoid *tearing*/race conditions.
 
-Decisión (ADR-02): **v1 usa `wl_shm`**; la migración a DMA-BUF entra en **v1.x**, **activada por medición** (solo si el throughput de `wl_shm` limita el objetivo de framerate), no por adelantado.
+Decision (ADR-02): **v1 uses `wl_shm`**; migration to DMA-BUF lands in **v1.x**, **driven by measurement** (only if `wl_shm` throughput limits the framerate target), not preemptively.
 
-Ciclo de presentación: tomar buffer libre → dibujar (lo hace canvas) → `wl_surface.attach` + `damage` + `commit` → el compositor lo presenta → se devuelve vía `wl_buffer.release`.
+Presentation cycle: take a free buffer → draw (done by canvas) → `wl_surface.attach` + `damage` + `commit` → the compositor presents it → it is returned via `wl_buffer.release`.
 
-## 6. Entrada
+## 6. Input
 
-- **Teclado:** `wl_keyboard` + **`libxkbcommon`** para *keymap*, modificadores, layout, repetición. Se usa el `keymap` que envía el compositor.
-- **Puntero:** `wl_pointer` (entrada/salida, movimiento, botones, eje de scroll/discreto, `axis_value120`), cursores (`wl_cursor_theme`).
+- **Keyboard:** `wl_keyboard` + **`libxkbcommon`** for *keymap*, modifiers, layout, repeat. The `keymap` sent by the compositor is used.
+- **Pointer:** `wl_pointer` (enter/leave, motion, buttons, scroll axis/discrete, `axis_value120`), cursors (`wl_cursor_theme`).
 - **Touch:** `wl_touch` (down/up/motion/cancel), multi-touch.
-- **Gestos:** `zwp_pointer_gestures_v1` (swipe/pinch/hold), `zwp_pointer_constraints_v1`, `zwp_relative_pointer_v1`.
-- Los eventos se traducen a un **tipo propio de Rivet** y se enrutan a `rivet-ui`; `rivet-window` no decide foco ni *hit-testing*.
+- **Gestures:** `zwp_pointer_gestures_v1` (swipe/pinch/hold), `zwp_pointer_constraints_v1`, `zwp_relative_pointer_v1`.
+- Events are translated to a **Rivet-defined type** and routed to `rivet-ui`; `rivet-window` handles neither focus nor *hit-testing*.
 
-## 7. Salidas, HiDPI y sincronización
+## 7. Outputs, HiDPI, and synchronization
 
-- `zxdg_output_manager_v1`: geometría lógica, escala por salida, nombre, `done`.
-- **HiDPI:** respetar `scale` entero y `fractional_scale_v1`; superficies múltiplo de la escala para nitidez. El tamaño lógico vs físico se maneja aquí.
-- **VSync:** `eglSwapInterval(display, 1)` para el throttle de presentación (GL). **No** usar `EGL_SWAP_BEHAVIOR_PRESERVED` para esto.
-- **Frame callback:** `wl_surface.frame` → `wl_callback.done` para pacear el redibujado y evitar dibujar de más.
+- `zxdg_output_manager_v1`: logical geometry, per-output scale, name, `done`.
+- **HiDPI:** respect integer `scale` and `fractional_scale_v1`; surfaces sized as multiples of the scale for sharpness. Logical vs. physical size is handled here.
+- **VSync:** `eglSwapInterval(display, 1)` for presentation throttling (GL). **Do not** use `EGL_SWAP_BEHAVIOR_PRESERVED` for this.
+- **Frame callback:** `wl_surface.frame` → `wl_callback.done` to pace redrawing and avoid over-drawing.
 
-## 8. Clipboard y Drag & Drop
+## 8. Clipboard and drag & drop
 
-- `wl_data_device_manager`: selección (copiar/pegar) y DnD.
-- MIME types propios (`text/plain;charset=utf-8`, `text/uri-list`, imagen).
-- Transferencia por `wl_data_source`/`wl_data_offer` con `pipe` (o `memfd`) gestionados en el bucle de eventos.
+- `wl_data_device_manager`: selection (copy/paste) and DnD.
+- Own MIME types (`text/plain;charset=utf-8`, `text/uri-list`, image).
+- Transfer via `wl_data_source`/`wl_data_offer` with `pipe` (or `memfd`) managed in the event loop.
 
-## 9. API pública (orientativa)
+## 9. Public API (indicative)
 
 ```rust
-pub struct Connection;           // handshake y globals
-pub struct Window {               // estado, rol, tamaño, visibilidad
+pub struct Connection;           // handshake and globals
+pub struct Window {               // state, role, size, visibility
     pub fn new(ctx: &Context, opts: WindowOptions) -> Result<Self, WindowError>;
     pub fn surface(&self) -> &Surface;
     pub fn set_size(&mut self, logical: Size) -> Result<(), WindowError>;
     pub fn commit(&mut self) -> Result<(), WindowError>;
 }
-pub struct Surface;               // wl_surface + rol
-pub struct Buffer;                // shm o dmabuf
-pub struct InputEvent;            // enum unificado
+pub struct Surface;               // wl_surface + role
+pub struct Buffer;                // shm or dmabuf
+pub struct InputEvent;            // unified enum
 pub enum WindowError { ... }
 ```
 
-## 10. Dependencias
+## 10. Dependencies
 
-- **Rust:** binding Wayland (`wayland-client`/`wayland-protocols` — Rust) o FFI mínima a `libwayland`; **`libxkbcommon`** (C de sistema, permitido).
-- **GL:** solo el *display*/EGL necesario para el contexto (compartido con canvas); no píxeles aquí.
-- **Sin GTK, sin Qt, sin toolkit ajeno.**
+- **Rust:** Wayland binding (`wayland-client`/`wayland-protocols` — Rust) or minimal FFI to `libwayland`; **`libxkbcommon`** (system C, allowed).
+- **GL:** only the *display*/EGL needed for the context (shared with canvas); no pixels here.
+- **No GTK, no Qt, no external toolkit.**
 
-## 11. Alcance
+## 11. Scope
 
-**v1:** conexión + registry, toplevel, `wl_shm`, teclado/puntero/touch, salidas y HiDPI básico, frame callback, clipboard/DnD básico, layer-shell para panel/lanzador.
+**v1:** connection + registry, toplevel, `wl_shm`, keyboard/pointer/touch, outputs and basic HiDPI, frame callback, basic clipboard/DnD, layer-shell for panel/launcher.
 
-**v1.x (por medición):** DMA-BUF + `linux-drm-syncobj-v1`, `fractional_scale` avanzado, gestos, decoraciones del servidor vs cliente.
+**v1.x (measurement-driven):** DMA-BUF + `linux-drm-syncobj-v1`, advanced `fractional_scale`, gestures, server-side vs client-side decorations.
 
-**Fuera:** X11 (solo Wayland), sesiones remotas, multi-GPU explícito.
+**Out:** X11 (Wayland only), remote sessions, explicit multi-GPU.
 
-## 12. Decisiones y correcciones aplicadas
+## 12. Decisions and applied corrections
 
-- **`wl_shm` ≠ zero-copy** (copia); zero-copy = **DMA-BUF**. Retirada la afirmación contraria.
-- Export a DMA-BUF con **`EGL_MESA_image_dma_buf_export`** (importación sería `EGL_EXT_image_dma_buf_import`).
-- **VSync vía `eglSwapInterval`**, no `EGL_SWAP_BEHAVIOR_PRESERVED`.
-- **`rivet-canvas` no depende de `rivet-window`** (ADR de `../RIVET.md`).
-- No se promete "0% de CPU" (ADR-08).
+- **`wl_shm` is not zero-copy** (copy involved); zero-copy = **DMA-BUF**. The contrary claim has been withdrawn.
+- DMA-BUF export with **`EGL_MESA_image_dma_buf_export`** (import would be `EGL_EXT_image_dma_buf_import`).
+- **VSync via `eglSwapInterval`**, not `EGL_SWAP_BEHAVIOR_PRESERVED`.
+- **`rivet-canvas` does not depend on `rivet-window`** (ADR in `../RIVET.md`).
+- No "0% CPU" promise (ADR-08).
 
-## 13. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 13. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-Latencia evento→frame, coste por frame con `wl_shm` vs DMA-BUF, uso de RAM de un buffer 1080p, tiempo de handshake, overhead de presentación. Método: `perf`, ftrace, contadores de frame propios.
+Event→frame latency, per-frame cost with `wl_shm` vs DMA-BUF, RAM usage of a 1080p buffer, handshake time, presentation overhead. Method: `perf`, ftrace, own frame counters.

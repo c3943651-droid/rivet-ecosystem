@@ -1,93 +1,93 @@
-# rivet-typography — Documentación definitiva
+# rivet-typography — Definitive documentation
 
-Subsistema de **fuentes y texto** de Rivet.
+Rivet's **fonts and text** subsystem.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Capa:** 2.5 (soporte de texto sobre canvas)
-- **Depende de:** `rivet-foundation`; es consumido por `rivet-canvas` / `rivet-ui`.
-- **Reemplaza a:** Pango + FriBidi + HarfBuzz (parcialmente, ver §7).
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Layer:** 2.5 (text support over canvas)
+- **Depends on:** `rivet-foundation`; consumed by `rivet-canvas` / `rivet-ui`.
+- **Replaces:** Pango + FriBidi + HarfBuzz (partially, see §7).
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-Cargar fuentes, **rastrerizar glifos** y **componer/"shaping"** texto para que `rivet-canvas` lo dibuje como textura. Resuelve: descubrir fuentes, parsear TrueType/OpenType, mapear caracteres→glifos (`cmap`), obtener contornos, rasterizar a máscara/atlas, medir texto y cachear.
+Load fonts, **rasterize glyphs**, and **compose/"shape"** text so that `rivet-canvas` can draw it as a texture. It solves: font discovery, TrueType/OpenType parsing, character→glyph mapping (`cmap`), outline extraction, rasterization to mask/atlas, text measurement, and caching.
 
-## 2. Componentes
+## 2. Components
 
-| Módulo | Responsabilidad |
+| Module | Responsibility |
 |---|---|
-| `loader` | Cargar fuentes (archivo, memoria), validar, fallback empaquetado. |
-| `parser` | Tablas TTF/OTF (`head`, `hhea`, `hmtx`, `cmap`, `glyf`, `CFF `, `kern`, `GPOS`...). |
-| `cmap` | Carácter → ID de glifo (formatos 4/12...). |
-| `outline` | Contornos (`glyf`/CFF) → polígonos. |
-| `rasterizer` | Contornos → máscara (analítica o `stb`-like). |
-| `metrics` | Avance, *advance width*, *kerning*, *ascent*/`descent`, *line height*. |
-| `cache` | Caché LRU de glifos por (fuente, tamaño, subpíxel). |
-| `texture` | Atlas de glifos → textura para canvas. |
-| `font` | Objeto `Font` (fuente + tamaño + rasgos), fallback en cadena. |
+| `loader` | Load fonts (file, memory), validate, packaged fallback. |
+| `parser` | TTF/OTF tables (`head`, `hhea`, `hmtx`, `cmap`, `glyf`, `CFF `, `kern`, `GPOS`...). |
+| `cmap` | Character → glyph ID (formats 4/12...). |
+| `outline` | Outlines (`glyf`/CFF) → polygons. |
+| `rasterizer` | Outlines → mask (analytical or `stb`-like). |
+| `metrics` | Advance, *advance width*, *kerning*, *ascent*/`descent`, *line height*. |
+| `cache` | LRU glyph cache keyed by (font, size, subpixel). |
+| `texture` | Glyph atlas → texture for canvas. |
+| `font` | `Font` object (font + size + features), chained fallback. |
 
-## 3. Descubrimiento de fuentes (ADR-05)
+## 3. Font discovery (ADR-05)
 
-- **Descubrimiento con `fontdb`** (crate **Rust puro**): escanea directorios estándar y fuentes embebidas del sistema.
-- **NO se usa `fontconfig`** (C): se evita esa dependencia.
-- **Fallback empaquetado:** se incluye al menos una fuente de respaldo en el binario para garantizar texto legible sin depender del sistema. Cadena de fallback configurable.
-- **Cero C de GUI.**
+- **Discovery with `fontdb`** (**pure Rust** crate): scans standard directories and the system's embedded fonts.
+- **`fontconfig` (C) is NOT used**: that dependency is avoided.
+- **Packaged fallback:** at least one fallback font is embedded in the binary to guarantee readable text without depending on the system. Configurable fallback chain.
+- **Zero GUI C.**
 
-## 4. Parseo y rasterizado
+## 4. Parsing and rasterization
 
-- Parseo de tablas con crate Rust (`ttf-parser` o equivalente Rust puro). 
-- `cmap`: soportar formatos 4 y 12 (BMP y Unicode completo).
-- Contornos `glyf` (TrueType) y `CFF` (OpenType PostScript).
-- Rasterizado con **cobertura analítica** (antialias), caché de máscaras.
-- **Limitación conocida:** **hinting** complejo de TrueType (`bytecode`) fuera del alcance inicial; se acepta menor nitidez a tamaños pequeños y se compensa con rasterizado subpíxel/PPEM alto.
+- Table parsing with a Rust crate (`ttf-parser` or a pure-Rust equivalent).
+- `cmap`: support formats 4 and 12 (BMP and full Unicode).
+- `glyf` outlines (TrueType) and `CFF` (PostScript OpenType).
+- Rasterization with **analytical coverage** (antialiasing), mask caching.
+- **Known limitation:** complex TrueType *hinting* (`bytecode`) is out of the initial scope; reduced sharpness at small sizes is accepted and compensated with subpixel rasterization/high PPEM.
 
-## 5. Shaping y bidi (alcance)
+## 5. Shaping and bidi (scope)
 
-- **v1:** shaping **simple** — avance + `kern` básico de tablas; suficiente para latino y muchos casos.
-- **Casos complejos** (árabe, índico, ligaduras contextuales por `GSUB`/`GPOS` completo) y **bidi (RTL)** quedan **fuera de v1** (horizonte v1.x/v2, evaluando un motor de shaping Rust como `rustybuzz`).
-- Se acepta que el rendering de scripts complejos en v1 no sea correcto; se documenta como limitación.
+- **v1:** **simple** shaping — advance width + basic table `kern`; sufficient for Latin and many cases.
+- **Complex cases** (Arabic, Indic, contextual ligatures via full `GSUB`/`GPOS`) and **bidi (RTL)** are **out of v1** (v1.x/v2 horizon, evaluating a Rust shaping engine such as `rustybuzz`).
+- It is accepted that complex script rendering in v1 is not correct; this is documented as a limitation.
 
-## 6. Caché y atlas
+## 6. Cache and atlas
 
-- **Caché LRU** con clave (font_id, pixel_size, subpixel_bin).
-- **Atlas de glifos** con empaquetado en una o más texturas; subida incremental a GPU.
-- **VRAM:** unos **KB por glifo** (p. ej. ~32px), no MB. Se mide el total del atlas.
-- `FrameStats` de canvas expone glifos rasterizados/página.
+- **LRU cache** keyed by (font_id, pixel_size, subpixel_bin).
+- **Glyph atlas** packed into one or more textures; incremental upload to GPU.
+- **VRAM:** on the order of **KB per glyph** (e.g. ~32px), not MB. Total atlas size is measured.
+- Canvas's `FrameStats` exposes rasterized glyphs per page.
 
-## 7. API pública (orientativa)
+## 7. Public API (indicative)
 
 ```rust
-pub struct FontDb;                       // descubrimiento y carga
-pub struct Font;                         // fuente + tamaño + rasgos
-pub struct TextLayout;                   // texto → glifos posicionados
+pub struct FontDb;                       // discovery and loading
+pub struct Font;                         // font + size + features
+pub struct TextLayout;                   // text → positioned glyphs
 pub struct Glyph { id, advance, bearing, atlas_rect }
 
 impl FontDb { pub fn load_system(&mut self); pub fn load_file(&mut self, p: &Path) -> Result<FontId>; }
 impl Font { pub fn layout(&self, text: &str) -> TextLayout; pub fn metrics(&self) -> FontMetrics; }
 ```
 
-## 8. Dependencias
+## 8. Dependencies
 
-- **Rust puro:** `fontdb` (descubrimiento), `ttf-parser` (parseo), rasterizador propio o crate Rust; `unicode` para segmentación básica.
-- **C de sistema:** ninguno (sin `fontconfig`, sin `freetype` en v1).
-- Fuente de respaldo empaquetada (licencia compatible).
+- **Pure Rust:** `fontdb` (discovery), `ttf-parser` (parsing), custom or Rust-crate rasterizer; `unicode` for basic segmentation.
+- **System C:** none (no `fontconfig`, no `freetype` in v1).
+- Packaged fallback font (compatible license).
 
-## 9. Alcance
+## 9. Scope
 
-**v1:** `fontdb`, TrueType/OpenType, `cmap` 4/12, `glyf`/`CFF`, rasterizado antialias, métricas + `kern`, shaping simple (LTR), caché LRU, atlas, fallback empaquetado.
+**v1:** `fontdb`, TrueType/OpenType, `cmap` 4/12, `glyf`/`CFF`, antialiased rasterization, metrics + `kern`, simple shaping (LTR), LRU cache, atlas, packaged fallback.
 
-**v1.x/v2:** shaping complejo y bidi (`rustybuzz`), hinting, fuentes variables, ligaduras contextuales, texto vertical.
+**v1.x/v2:** complex shaping and bidi (`rustybuzz`), hinting, variable fonts, contextual ligatures, vertical text.
 
-## 10. Decisiones y correcciones aplicadas
+## 10. Decisions and corrections applied
 
-- Fuentes con **`fontdb`** y **sin `fontconfig`** (ADR-05).
-- Shaping complejo **explícitamente fuera** de v1 (no fingir soporte total).
-- VRAM por glifo en **KB**.
-- Sin dependencias C de GUI.
+- Fonts with **`fontdb`** and **without `fontconfig`** (ADR-05).
+- Complex shaping **explicitly out** of v1 (do not claim full support).
+- VRAM per glyph in **KB**.
+- No GUI C dependencies.
 
-## 11. Métricas (objetivos, a medir — `../RIVET.md` §14)
+## 11. Metrics (targets, to be measured — `../RIVET.md` §14)
 
-Tiempo de carga/parseo de fuente, ms de rasterizado por glifo, hit-ratio de caché, RAM por fuente cargada, VRAM del atlas, calidad (subjetiva) a tamaños pequeños. Método: `criterion` + telemetría de atlas.
+Font load/parse time, rasterization ms per glyph, cache hit ratio, RAM per loaded font, atlas VRAM, (subjective) quality at small sizes. Method: `criterion` + atlas telemetry.

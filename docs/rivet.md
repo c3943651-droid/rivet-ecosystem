@@ -1,25 +1,25 @@
-# rivet — Documentación definitiva (crate fachada)
+# rivet — Definitive documentation (facade crate)
 
-Crate **fachada** del ecosistema Rivet: reexporta la API pública de todos los subsistemas bajo un único nombre para que las apps escriban `use rivet::prelude::*;`.
+**Facade** crate of the Rivet ecosystem: re-exports the public API of all subsystems under a single name so that applications can write `use rivet::prelude::*;`.
 
-- **Versión:** 2.0 (definitiva)
-- **Fecha:** 2026-10-11
-- **Depende de (y reexporta):** `rivet-foundation`, `rivet-window`, `rivet-canvas`, `rivet-typography`, `rivet-image`, `rivet-style`, `rivet-ui`.
-- **Documento paraguas:** `../RIVET.md`
+- **Version:** 2.0 (definitive)
+- **Date:** 2026-10-11
+- **Depends on (and re-exports):** `rivet-foundation`, `rivet-window`, `rivet-canvas`, `rivet-typography`, `rivet-image`, `rivet-style`, `rivet-ui`.
+- **Umbrella document:** `../RIVET.md`
 
 ---
 
-## 1. Propósito
+## 1. Purpose
 
-Rivet no es un framework monolítico: son **crates independientes** que pueden usarse por separado. `rivet` es una capa fina de conveniencia que:
+Rivet is not a monolithic framework: it consists of **independent crates** that can be used separately. `rivet` is a thin convenience layer that:
 
-1. **Reexporta** los tipos y traits principales.
-2. Ofrece un **prelude** y un punto de entrada (`Application`).
-3. Oculta el ensamblado de dependencias (contexto, bucle de eventos, registro de módulos).
+1. **Re-exports** the core types and traits.
+2. Provides a **prelude** and an entry point (`Application`).
+3. Hides dependency assembly (context, event loop, module registration).
 
-No añade lógica propia: **no esconde las crates**, que siguen siendo accesibles directamente.
+It adds no logic of its own: it does **not** hide the crates, which remain directly accessible.
 
-## 2. Estructura
+## 2. Structure
 
 ```rust
 // crates/rivet/src/lib.rs
@@ -39,7 +39,7 @@ pub mod prelude {
 }
 ```
 
-## 3. Uso
+## 3. Usage
 
 ```rust
 use rivet::prelude::*;
@@ -55,26 +55,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## 4. ¿Fachada o crates por separado?
+## 4. Facade or separate crates?
 
-- **Usa la fachada** si construyes una app completa.
-- **Usa las crates sueltas** si solo necesitas, p. ej., el slab (`rivet-foundation`) o el decoder de imágenes (`rivet-image`) sin arrastrar la UI.
+- **Use the facade** if you build a complete application.
+- **Use the individual crates** if you only need, e.g., the slab (`rivet-foundation`) or the image decoder (`rivet-image`) without pulling in the UI.
 
-## 5. Dependencias
+## 5. Dependencies
 
-- Depende de todo el ecosistema; **ninguna capa depende de `rivet`** (grafo acíclico). `rivet` está en la cima.
+- It depends on the entire ecosystem; **no layer depends on `rivet`** (acyclic graph). `rivet` sits at the top.
 
-## 6. Alcance
+## 6. Scope
 
-**v1:** reexportaciones + prelude + `Application`.
+**v1:** re-exports + prelude + `Application`.
 
-**Fuera:** no incluye herramientas (`rivet-style` CLI), ni apps semilla (panel, lanzador, AnimaEngine).
+**Out:** does not include tooling (`rivet-style` CLI) or seed applications (panel, launcher, AnimaEngine).
 
-## 7. Decisiones aplicadas
+## 7. Applied decisions
 
-- Fachada **fina**: preserva la modularidad y el "build vs. borrow" del ecosistema.
-- El nombre `rivet` coincide con el del proyecto; sirve de puerta de entrada estándar.
+- **Thin** facade: preserves the ecosystem's modularity and the "build vs. borrow" principle.
+- The name `rivet` matches the project name; it serves as the standard entry point.
 
-## 8. Métricas
+## 8. Metrics
 
-El coste de la fachada debe ser **~0** (solo reexportaciones; sin runtime añadido). Se verifica que no introduce código de inicialización propio.
+The facade cost must be **~0** (re-exports only; no added runtime). It is verified that it introduces no initialization code of its own.
