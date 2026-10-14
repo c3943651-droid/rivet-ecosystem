@@ -669,6 +669,9 @@ reality" column is authoritative.**
   a11y (AT-SPI), DMA-BUF, client-side decorations.
 - [ ] Remaining measurements: Cairo/FreeType/GLX baselines, `wl_shm`
   copy breakdown, idle RSS.
+- [ ] Source-level module comments (`//!`, 322 across 68 files) still in
+  Spanish — tracked in
+  [#1](https://github.com/c3943651-droid/rivet-ecosystem/issues/1).
 
 > **For agents/AI:** this is the authoritative document. Do not consult
 > `archivo/` or `Wrappers-Legacy-prerivet/` for design decisions; use
