@@ -8,6 +8,8 @@ use std::time::Duration;
 
 use wayland_client::protocol::{wl_buffer, wl_shm::Format};
 use wayland_client::{Connection as WlConnection, EventQueue, Proxy as _, QueueHandle};
+use wayland_protocols::xdg::decoration::zv1::client::zxdg_toplevel_decoration_v1;
+use wayland_protocols::xdg::shell::client::xdg_toplevel;
 use wayland_protocols_wlr::layer_shell::v1::client::{
     zwlr_layer_shell_v1::Layer as WlrLayer, zwlr_layer_surface_v1::Anchor as WlrAnchor,
     zwlr_layer_surface_v1::KeyboardInteractivity as WlrInteractivity,
@@ -214,6 +216,47 @@ pub struct Wayland {
     registered: bool,
 }
 
+/// Borde(s) de redimensionado interactivo (`xdg_toplevel.resize`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ResizeEdge {
+    /// Sin borde.
+    #[default]
+    None,
+    /// Borde superior.
+    Top,
+    /// Borde inferior.
+    Bottom,
+    /// Borde izquierdo.
+    Left,
+    /// Borde derecho.
+    Right,
+    /// Esquina superior izquierda.
+    TopLeft,
+    /// Esquina superior derecha.
+    TopRight,
+    /// Esquina inferior izquierda.
+    BottomLeft,
+    /// Esquina inferior derecha.
+    BottomRight,
+}
+
+impl From<ResizeEdge> for xdg_toplevel::ResizeEdge {
+    fn from(edge: ResizeEdge) -> Self {
+        use xdg_toplevel::ResizeEdge as E;
+        match edge {
+            ResizeEdge::None => E::None,
+            ResizeEdge::Top => E::Top,
+            ResizeEdge::Bottom => E::Bottom,
+            ResizeEdge::Left => E::Left,
+            ResizeEdge::Right => E::Right,
+            ResizeEdge::TopLeft => E::TopLeft,
+            ResizeEdge::TopRight => E::TopRight,
+            ResizeEdge::BottomLeft => E::BottomLeft,
+            ResizeEdge::BottomRight => E::BottomRight,
+        }
+    }
+}
+
 impl Wayland {
     /// Conecta con `$WAYLAND_DISPLAY` y completa el handshake del registry.
     pub fn connect() -> Result<Self> {
@@ -350,10 +393,29 @@ impl Wayland {
 
         // Superficie + rol toplevel.
         let surface = compositor.create_surface(qh, ud.clone());
+        // Escala fraccional (HiDPI 125%/150%): viewport + eventos
+        // preferidos del compositor. Sin ambos globals, fallback entero.
+        let (viewport, fractional) = state
+            .viewporter
+            .as_ref()
+            .zip(state.fractional_manager.as_ref())
+            .map_or((None, None), |(viewporter, manager)| {
+                let viewport = viewporter.get_viewport(&surface, qh, ());
+                let fractional = manager.get_fractional_scale(&surface, qh, ud.clone());
+                (Some(viewport), Some(fractional))
+            });
         let xdg = wm_base.get_xdg_surface(&surface, qh, ud.clone());
         let toplevel = xdg.get_toplevel(qh, ud.clone());
         toplevel.set_title(opts.title.clone());
         toplevel.set_app_id(opts.app_id.clone());
+        // Decoraciones del servidor (v0.3): si el compositor ofrece
+        // xdg-decoration, pedir modo servidor → barra de título y
+        // mover/redimensionar los maneja el compositor.
+        let decoration = state.decoration_manager.as_ref().map(|manager| {
+            let dec = manager.get_toplevel_decoration(&toplevel, qh, ud.clone());
+            dec.set_mode(zxdg_toplevel_decoration_v1::Mode::ServerSide);
+            dec
+        });
 
         // Pool shm a tamaño físico (escala entera de las salidas).
         let scale = state.max_scale();
@@ -375,6 +437,11 @@ impl Wayland {
             logical_width: opts.width.max(1),
             logical_height: opts.height.max(1),
             scale,
+            fractional_scale_120: None,
+            decoration,
+            server_decorated: false,
+            viewport,
+            _fractional: fractional,
             pixels,
             pool,
             generation: 0,
@@ -425,6 +492,15 @@ impl Wayland {
         let ud = SurfaceUd { window: window_id };
 
         let surface = compositor.create_surface(qh, ud.clone());
+        let (viewport, fractional) = state
+            .viewporter
+            .as_ref()
+            .zip(state.fractional_manager.as_ref())
+            .map_or((None, None), |(viewporter, manager)| {
+                let viewport = viewporter.get_viewport(&surface, qh, ());
+                let fractional = manager.get_fractional_scale(&surface, qh, ud.clone());
+                (Some(viewport), Some(fractional))
+            });
         let layer_surface = layer_shell.get_layer_surface(
             &surface,
             None, // salida: la que elija el compositor
@@ -458,6 +534,11 @@ impl Wayland {
             logical_width: opts.width.max(1),
             logical_height: opts.height.max(1),
             scale,
+            fractional_scale_120: None,
+            decoration: None,
+            server_decorated: false,
+            viewport,
+            _fractional: fractional,
             pixels,
             pool,
             generation: 0,
@@ -470,6 +551,51 @@ impl Wayland {
             id: window_id,
             shared: Rc::clone(&self.shared),
         })
+    }
+
+    /// Destruye una ventana por ID: superficies, rol, viewport, buffers y
+    /// pool (multiventana v0.3).
+    ///
+    /// Idempotente. Los proxies de buffers destruidos ignoran los
+    /// `release` tardíos del compositor; la ventana deja de recibir
+    /// eventos.
+    pub fn destroy_window(&mut self, id: WindowId) -> Result<()> {
+        let mut inner = self.shared.borrow_mut();
+        let Some(win) = inner.state.windows.remove(&id) else {
+            return Ok(());
+        };
+        for buffer in win.buffers.into_iter().flatten() {
+            buffer.destroy();
+        }
+        win.pool.destroy();
+        if let Some(decoration) = win.decoration {
+            decoration.destroy();
+        }
+        match win.role {
+            Role::Toplevel { xdg, toplevel } => {
+                toplevel.destroy();
+                xdg.destroy();
+            }
+            Role::LayerShell { layer } => {
+                layer.destroy();
+            }
+        }
+        if let Some(viewport) = win.viewport {
+            viewport.destroy();
+        }
+        if let Some(fractional) = win._fractional {
+            fractional.destroy();
+        }
+        win.surface.destroy();
+        // Referencias de entrada que apuntaban a la ventana cerrada.
+        if inner.state.focused == Some(id) {
+            inner.state.focused = None;
+        }
+        if inner.state.pointer_window == Some(id) {
+            inner.state.pointer_window = None;
+        }
+        inner.state.touches.retain(|_, &mut w| w != id);
+        Ok(())
     }
 
     /// `true` si el compositor ofrece `zwp_pointer_gestures_v1`.
@@ -520,6 +646,68 @@ impl Wayland {
         state.drag_text.push((source, text.to_string()));
         conn.flush()
             .map_err(|e| WindowError::Connect(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Inicia un movimiento interactivo de la ventana (drag del puntero).
+    ///
+    /// Requiere un serial de entrada válido: llamar durante el manejo de
+    /// una pulsación de botón (el serial del press). Sin decoraciones del
+    /// servidor, esto es la base de una barra de título CSD propia.
+    pub fn interactive_move(&mut self, window: &Window) -> Result<()> {
+        let mut inner = self.shared.borrow_mut();
+        let Inner { conn, state, .. } = &mut *inner;
+        let seat = state
+            .seat
+            .clone()
+            .ok_or_else(|| WindowError::MissingGlobal("wl_seat".into()))?;
+        let serial = state.last_serial;
+        if serial == 0 {
+            return Err(WindowError::Connect(
+                "sin serial de entrada: requiere una pulsación previa".into(),
+            ));
+        }
+        let toplevel = state
+            .windows
+            .get(&window.id)
+            .and_then(|w| match &w.role {
+                Role::Toplevel { toplevel, .. } => Some(toplevel.clone()),
+                _ => None,
+            })
+            .ok_or(WindowError::NotConfigured)?;
+        toplevel._move(&seat, serial);
+        conn.flush()
+            .map_err(|e| WindowError::System(std::io::Error::other(e.to_string())))?;
+        Ok(())
+    }
+
+    /// Inicia un redimensionado interactivo desde `edges`.
+    ///
+    /// Como [`Wayland::interactive_move`]: llamar durante una pulsación.
+    pub fn interactive_resize(&mut self, window: &Window, edges: ResizeEdge) -> Result<()> {
+        let mut inner = self.shared.borrow_mut();
+        let Inner { conn, state, .. } = &mut *inner;
+        let seat = state
+            .seat
+            .clone()
+            .ok_or_else(|| WindowError::MissingGlobal("wl_seat".into()))?;
+        let serial = state.last_serial;
+        if serial == 0 {
+            return Err(WindowError::Connect(
+                "sin serial de entrada: requiere una pulsación previa".into(),
+            ));
+        }
+        let toplevel = state
+            .windows
+            .get(&window.id)
+            .and_then(|w| match &w.role {
+                Role::Toplevel { toplevel, .. } => Some(toplevel.clone()),
+                _ => None,
+            })
+            .ok_or(WindowError::NotConfigured)?;
+        toplevel.resize(&seat, serial, edges.into());
+        conn.flush()
+            .map_err(|e| WindowError::System(std::io::Error::other(e.to_string())))?;
         Ok(())
     }
 
@@ -616,24 +804,40 @@ impl Window {
         w.map_or((1, 1), |w| (w.logical_width, w.logical_height))
     }
 
-    /// Tamaño físico del buffer (lógico × escala).
+    /// Tamaño físico del buffer (lógico × escala efectiva, redondeado
+    /// arriba; con escala fraccional el viewport recorta el sobrante).
     #[must_use]
     pub fn buffer_size(&self) -> (u32, u32) {
         let inner = self.shared.borrow();
-        let w = inner.state.windows.get(&self.id);
-        w.map_or((1, 1), |w| {
-            (
-                w.logical_width.max(1) * w.scale,
-                w.logical_height.max(1) * w.scale,
-            )
-        })
+        inner
+            .state
+            .windows
+            .get(&self.id)
+            .map_or((1, 1), WindowInner::buffer_dimensions)
     }
 
-    /// Escala del buffer de esta ventana.
+    /// Escala efectiva de esta ventana (fraccional si el compositor la
+    /// anunció; entera de las salidas en caso contrario).
     #[must_use]
-    pub fn scale(&self) -> u32 {
+    pub fn scale(&self) -> f32 {
         let inner = self.shared.borrow();
-        inner.state.windows.get(&self.id).map_or(1, |w| w.scale)
+        inner
+            .state
+            .windows
+            .get(&self.id)
+            .map_or(1.0, |w| w.effective_scale() as f32)
+    }
+
+    /// `true` si el compositor concedió decoraciones del servidor
+    /// (barra de título/mover gestionados por él; v0.3).
+    #[must_use]
+    pub fn decorated(&self) -> bool {
+        let inner = self.shared.borrow();
+        inner
+            .state
+            .windows
+            .get(&self.id)
+            .is_some_and(|w| w.server_decorated)
     }
 
     /// `true` tras el primer configure del compositor.
@@ -679,10 +883,7 @@ impl Window {
         }
 
         // Tamaño físico deseado; recrear pool si cambió.
-        let (phys_w, phys_h) = (
-            window.logical_width.max(1) * window.scale,
-            window.logical_height.max(1) * window.scale,
-        );
+        let (phys_w, phys_h) = window.buffer_dimensions();
         if window.pixels.width() != phys_w || window.pixels.height() != phys_h {
             state.retire_pool(self.id);
         }
@@ -730,6 +931,19 @@ impl Window {
             );
             (window.surface.clone(), buffer)
         };
+        // Escala fraccional: el viewport mapea el buffer físico al tamaño
+        // lógico (source exacto lógico×escala; el resto del buffer se recorta).
+        {
+            let window = state.windows.get(&self.id).expect("ventana presente");
+            if let Some(viewport) = &window.viewport {
+                let s = window.effective_scale();
+                let lw = f64::from(window.logical_width.max(1));
+                let lh = f64::from(window.logical_height.max(1));
+                viewport.set_source(0.0, 0.0, lw * s, lh * s);
+                viewport.set_destination(lw as i32, lh as i32);
+            }
+        }
+
         surface.attach(Some(&buffer), 0, 0);
         let (w, h) = (phys_w as i32, phys_h as i32);
         surface.damage_buffer(0, 0, w, h);
@@ -756,10 +970,7 @@ impl WaylandState {
         let Some(window) = self.windows.get(&window_id) else {
             return;
         };
-        let (phys_w, phys_h) = (
-            window.logical_width.max(1) * window.scale,
-            window.logical_height.max(1) * window.scale,
-        );
+        let (phys_w, phys_h) = window.buffer_dimensions();
         let new_pixels = ShmPixels::new(phys_w, phys_h, BUFFER_SLOTS);
         let new_pool = self.shm.as_ref().expect("wl_shm presente").create_pool(
             new_pixels.borrowed_fd(),

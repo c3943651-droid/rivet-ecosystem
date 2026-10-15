@@ -28,6 +28,9 @@ pub struct Batch {
     pub kind: ShaderKind,
     /// Textura a fijar (solo `Textured`).
     pub texture: Option<TextureId>,
+    /// Rectángulo de recorte del lote (píxeles, Y hacia abajo; `None` =
+    /// sin recorte). Los lotes se separan cuando cambia (v0.2).
+    pub clip: Option<Rect>,
     /// Vértices intercalados: pos.xy uv.xy color.rgba (8 × f32).
     pub vertices: Vec<f32>,
     /// Índices de triángulos.
@@ -58,6 +61,8 @@ pub struct RenderQueue {
     vertex_count: usize,
     /// Unión de las regiones afectadas por los comandos encolados.
     damage: Option<Rect>,
+    /// Pila de rects de recorte activos (intersecados al apilar).
+    clip_stack: Vec<Rect>,
 }
 
 impl RenderQueue {
@@ -144,6 +149,30 @@ impl RenderQueue {
         self.clear = None;
         self.vertex_count = 0;
         self.damage = None;
+        self.clip_stack.clear();
+    }
+
+    /// Empila un rect de recorte: los comandos posteriores se dibujan solo
+    /// dentro de la **intersección** con los rects ya activos.
+    ///
+    /// Debe emparejarse con [`RenderQueue::pop_clip`] (anidado).
+    pub fn push_clip(&mut self, rect: Rect) {
+        let effective = match self.clip_stack.last() {
+            Some(top) => intersect(*top, rect).unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0)),
+            None => rect,
+        };
+        self.clip_stack.push(effective);
+    }
+
+    /// Desapila el último rect de recorte.
+    pub fn pop_clip(&mut self) {
+        self.clip_stack.pop();
+    }
+
+    /// Recorte activo (`None` sin `push_clip` pendiente).
+    #[must_use]
+    pub fn clip(&self) -> Option<Rect> {
+        self.clip_stack.last().copied()
     }
 
     /// Registra una región como "sucia" (unión con el damage actual).
@@ -207,28 +236,39 @@ impl RenderQueue {
         self.vertex_count += added;
     }
 
-    /// Devuelve el lote activo, creándolo si cambia (capa, shader, textura).
+    /// Devuelve el lote activo, creándolo si cambia (capa, shader, textura,
+    /// clip).
     pub(crate) fn batch_for(
         &mut self,
         layer: u32,
         kind: ShaderKind,
         texture: Option<TextureId>,
     ) -> &mut Batch {
-        let compatible = self
-            .batches
-            .last()
-            .is_some_and(|b| b.layer == layer && b.kind == kind && b.texture == texture);
+        let clip = self.clip_stack.last().copied();
+        let compatible = self.batches.last().is_some_and(|b| {
+            b.layer == layer && b.kind == kind && b.texture == texture && b.clip == clip
+        });
         if !compatible {
             self.batches.push(Batch {
                 layer,
                 kind,
                 texture,
+                clip,
                 vertices: Vec::new(),
                 indices: Vec::new(),
             });
         }
         self.batches.last_mut().expect("lote recién creado")
     }
+}
+
+/// Intersección de dos rects (`None` si no se solapan).
+fn intersect(a: Rect, b: Rect) -> Option<Rect> {
+    let x = a.x.max(b.x);
+    let y = a.y.max(b.y);
+    let right = a.right().min(b.right());
+    let bottom = a.bottom().min(b.bottom());
+    (right > x && bottom > y).then(|| Rect::new(x, y, right - x, bottom - y))
 }
 
 #[cfg(test)]
@@ -289,6 +329,38 @@ mod tests {
         assert!(q.batches().is_empty());
         assert!(q.blurs().is_empty());
         assert_eq!(q.background(), None);
+    }
+
+    #[test]
+    fn clips_separan_lotes_e_intersectan() {
+        let mut q = RenderQueue::new();
+        let full = Rect::new(0.0, 0.0, 100.0, 100.0);
+        q.rect(0, full, Color::WHITE); // lote sin clip
+        q.push_clip(Rect::new(10.0, 10.0, 50.0, 50.0));
+        assert_eq!(q.clip(), Some(Rect::new(10.0, 10.0, 50.0, 50.0)));
+        q.rect(0, full, Color::WHITE); // lote con clip
+                                       // Anidar un clip disjunto degenera la intersección.
+        q.push_clip(Rect::new(200.0, 200.0, 10.0, 10.0));
+        assert_eq!(
+            q.clip(),
+            Some(Rect::new(0.0, 0.0, 0.0, 0.0)),
+            "intersección vacía degenerada"
+        );
+        q.rect(0, full, Color::WHITE); // lote con clip degenerado
+        q.pop_clip();
+        assert_eq!(q.clip(), Some(Rect::new(10.0, 10.0, 50.0, 50.0)));
+        q.pop_clip();
+        assert_eq!(q.clip(), None);
+        q.rect(0, full, Color::WHITE); // vuelve al lote sin clip… ya cerrado
+        let batches = q.batches();
+        assert_eq!(batches.len(), 4, "cada cambio de clip separa lote");
+        assert_eq!(batches[0].clip, None);
+        assert_eq!(batches[1].clip, Some(Rect::new(10.0, 10.0, 50.0, 50.0)));
+        assert_eq!(batches[2].clip, Some(Rect::new(0.0, 0.0, 0.0, 0.0)));
+        assert_eq!(batches[3].clip, None);
+        // clear limpia la pila.
+        q.clear();
+        assert_eq!(q.clip(), None);
     }
 }
 

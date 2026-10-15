@@ -35,6 +35,26 @@ pub(crate) fn quantize_subpixel(x: f32) -> (f32, u8) {
     }
 }
 
+/// Tamaño (px) por debajo del cual se desactiva el posicionamiento
+/// subpíxel (v0.3).
+///
+/// Los bins de ¼ px reparten los bordes de cada trazo entre dos columnas
+/// ("doble trazo" perceptible): a tamaños pequeños la ganancia de
+/// espaciado es invisible pero el reparto se ve muy bien. Los toolkits
+/// reales hacen lo mismo vía *light hinting* (FreeType) o posiciones
+/// enteras. En texto grande el subpíxel sí mejora el ritmo.
+pub(crate) const SUBPIXEL_MIN_SIZE: f32 = 20.0;
+
+/// Posición del glifo para el tamaño de la fuente: subpíxel (bins de ¼)
+/// por encima de [`SUBPIXEL_MIN_SIZE`], entero por debajo.
+pub(crate) fn quantize_for_size(x: f32, size_px: f32) -> (f32, u8) {
+    if size_px >= SUBPIXEL_MIN_SIZE {
+        quantize_subpixel(x)
+    } else {
+        (x.round(), 0)
+    }
+}
+
 /// Texto convertido a glifos posicionados (shaping simple LTR, doc §5).
 #[derive(Debug, Clone)]
 pub struct TextLayout {
@@ -140,7 +160,7 @@ impl Font {
                     x += units as f32 * self.px_per_unit();
                 }
             }
-            let (pen_x, bin) = quantize_subpixel(x);
+            let (pen_x, bin) = quantize_for_size(x, self.size_px);
             glyphs.push(PlacedGlyph {
                 glyph,
                 face: chosen_face,

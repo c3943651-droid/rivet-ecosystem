@@ -33,16 +33,18 @@ pub use rivet_window as window;
 
 /// Common public API for applications: `use rivet_gui::prelude::*;`.
 pub mod prelude {
-    // App lifecycle (ui).
-    pub use rivet_ui::{Application, Ui};
+    // App lifecycle (ui) + multiventana (v0.3).
+    pub use rivet_ui::{Application, ListView, Ui, WindowIndex};
+    pub use rivet_window::WindowOptions;
 
     // Widgets and tree.
     pub use rivet_ui::registry::WidgetRegistry;
     pub use rivet_ui::widget::{state, WidgetId, WidgetKind, WidgetNode};
 
     // Events and input.
-    pub use rivet_ui::event::{EventDispatcher, UiInput};
+    pub use rivet_ui::event::{keysym, EventDispatcher, KeyInput, UiInput};
     pub use rivet_ui::focus::FocusManager;
+    pub use rivet_ui::Modifiers;
     pub use rivet_window::WindowEvent;
 
     // Drawing.

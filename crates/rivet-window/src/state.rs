@@ -12,9 +12,16 @@ use wayland_client::protocol::{
 use wayland_client::{
     delegate_noop, event_created_child, Connection, Dispatch, Proxy, QueueHandle, WEnum,
 };
+use wayland_protocols::wp::fractional_scale::v1::client::{
+    wp_fractional_scale_manager_v1, wp_fractional_scale_v1,
+};
 use wayland_protocols::wp::pointer_gestures::zv1::client::{
     zwp_pointer_gesture_hold_v1, zwp_pointer_gesture_pinch_v1, zwp_pointer_gesture_swipe_v1,
     zwp_pointer_gestures_v1,
+};
+use wayland_protocols::wp::viewporter::client::{wp_viewport, wp_viewporter};
+use wayland_protocols::xdg::decoration::zv1::client::{
+    zxdg_decoration_manager_v1, zxdg_toplevel_decoration_v1,
 };
 use wayland_protocols::xdg::shell::client::{xdg_surface, xdg_toplevel, xdg_wm_base};
 use wayland_protocols_wlr::layer_shell::v1::client::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
@@ -80,6 +87,7 @@ pub(crate) struct OfferState {
     pub(crate) mimes: Vec<String>,
 }
 
+/// Estado de una ventana.
 pub(crate) struct WindowInner {
     pub(crate) surface: wl_surface::WlSurface,
     pub(crate) role: Role,
@@ -87,8 +95,18 @@ pub(crate) struct WindowInner {
     /// Tamaño lógico comunicado por el compositor.
     pub(crate) logical_width: u32,
     pub(crate) logical_height: u32,
-    /// Escala del buffer (HiDPI entero).
+    /// Escala del buffer (HiDPI entero; fallback sin viewporter).
     pub(crate) scale: u32,
+    /// Escala fraccional preferida en unidades de 1/120 (`None` sin evento).
+    pub(crate) fractional_scale_120: Option<u32>,
+    /// Decoración del servidor solicitada (toplevel; v0.3).
+    pub(crate) decoration: Option<zxdg_toplevel_decoration_v1::ZxdgToplevelDecorationV1>,
+    /// El compositor concedió decoración del servidor.
+    pub(crate) server_decorated: bool,
+    /// Viewport activo (escala fraccional; buffer_scale queda a 1).
+    pub(crate) viewport: Option<wp_viewport::WpViewport>,
+    /// Proxy `wp_fractional_scale_v1` (mantenerlo vivo con la superficie).
+    pub(crate) _fractional: Option<wp_fractional_scale_v1::WpFractionalScaleV1>,
     /// Memoria compartida subyacente.
     pub(crate) pixels: ShmPixels,
     pub(crate) pool: wl_shm_pool::WlShmPool,
@@ -96,6 +114,24 @@ pub(crate) struct WindowInner {
     pub(crate) slots: Vec<bool>, // true = busy (adjunto al compositor)
     /// Buffers por slot del pool vigente (se crean bajo demanda).
     pub(crate) buffers: Vec<Option<wl_buffer::WlBuffer>>,
+}
+
+impl WindowInner {
+    /// Escala efectiva: fraccional (1/120) si el compositor la envió,
+    /// entera de las salidas en caso contrario.
+    pub(crate) fn effective_scale(&self) -> f64 {
+        self.fractional_scale_120
+            .map_or_else(|| f64::from(self.scale.max(1)), |s| f64::from(s) / 120.0)
+    }
+
+    /// Dimensiones físicas del buffer: lógico × escala, redondeado arriba
+    /// (el viewport recorta el sobrante fraccionario).
+    pub(crate) fn buffer_dimensions(&self) -> (u32, u32) {
+        let s = self.effective_scale();
+        let w = (f64::from(self.logical_width.max(1)) * s).ceil().max(1.0) as u32;
+        let h = (f64::from(self.logical_height.max(1)) * s).ceil().max(1.0) as u32;
+        (w, h)
+    }
 }
 
 /// Pools obsoletos que esperan `wl_buffer.release` antes de destruirse.
@@ -228,6 +264,13 @@ pub(crate) struct WaylandState {
     pub(crate) output_scale: HashMap<usize, u32>,
     pub(crate) layer_shell: Option<zwlr_layer_shell_v1::ZwlrLayerShellV1>,
     pub(crate) gestures: Option<zwp_pointer_gestures_v1::ZwpPointerGesturesV1>,
+    /// Viewporter (requisito de la escala fraccional).
+    pub(crate) viewporter: Option<wp_viewporter::WpViewporter>,
+    /// Gestor de escala fraccional (HiDPI 125%/150%…).
+    pub(crate) fractional_manager:
+        Option<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1>,
+    /// Gestor de decoraciones del servidor (barra de título SSD, v0.3).
+    pub(crate) decoration_manager: Option<zxdg_decoration_manager_v1::ZxdgDecorationManagerV1>,
 
     // Ventanas.
     pub(crate) next_window: WindowId,
@@ -281,6 +324,9 @@ impl WaylandState {
             output_scale: HashMap::new(),
             layer_shell: None,
             gestures: None,
+            viewporter: None,
+            fractional_manager: None,
+            decoration_manager: None,
             next_window: 0,
             windows: HashMap::new(),
             zombies: Vec::new(),
@@ -393,6 +439,29 @@ impl Dispatch<wl_registry::WlRegistry, ()> for WaylandState {
                         let _output: wl_output::WlOutput =
                             registry.bind(name, 3, qh, OutputUd { index });
                     }
+                    "wp_viewporter" => {
+                        state.viewporter = Some(
+                            registry.bind::<wp_viewporter::WpViewporter, _, _>(name, 1, qh, ()),
+                        );
+                    }
+                    "wp_fractional_scale_manager_v1" => {
+                        state.fractional_manager = Some(registry.bind::<
+                            wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+                            _,
+                            _,
+                        >(name, 1, qh, ()));
+                    }
+                    "zxdg_decoration_manager_v1" => {
+                        state.decoration_manager = Some(
+                            registry
+                                .bind::<zxdg_decoration_manager_v1::ZxdgDecorationManagerV1, _, _>(
+                                    name,
+                                    1,
+                                    qh,
+                                    (),
+                                ),
+                        );
+                    }
                     _ => {}
                 }
             }
@@ -437,9 +506,13 @@ impl Dispatch<xdg_surface::XdgSurface, SurfaceUd> for WaylandState {
             if let Some(ud) = xdg_surface.data::<SurfaceUd>() {
                 if let Some(window) = state.windows.get_mut(&ud.window) {
                     window.configured = true;
-                    window
-                        .surface
-                        .set_buffer_scale(window.scale.try_into().unwrap_or(1));
+                    // Sin viewport la escala entera sigue por buffer_scale;
+                    // con viewport el escalado lo hace wp_viewport (present).
+                    if window.viewport.is_none() {
+                        window
+                            .surface
+                            .set_buffer_scale(window.scale.try_into().unwrap_or(1));
+                    }
                     let (w, h) = (window.logical_width, window.logical_height);
                     state.push_event(WindowEvent::Configure {
                         window: ud.window,
@@ -447,6 +520,36 @@ impl Dispatch<xdg_surface::XdgSurface, SurfaceUd> for WaylandState {
                         height: h,
                     });
                 }
+            }
+        }
+    }
+}
+
+impl Dispatch<wp_fractional_scale_v1::WpFractionalScaleV1, SurfaceUd> for WaylandState {
+    fn event(
+        state: &mut Self,
+        _: &wp_fractional_scale_v1::WpFractionalScaleV1,
+        event: wp_fractional_scale_v1::Event,
+        ud: &SurfaceUd,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if let wp_fractional_scale_v1::Event::PreferredScale { scale } = event {
+            // Escala preferida en unidades de 1/120 (120 = 1.0).
+            let Some(window) = state.windows.get_mut(&ud.window) else {
+                return;
+            };
+            let changed = window.fractional_scale_120 != Some(scale);
+            window.fractional_scale_120 = Some(scale);
+            if changed {
+                // La app debe re-renderizar al nuevo tamaño de buffer;
+                // reutilizamos Configure (tamaño lógico sin cambios).
+                let (w, h) = (window.logical_width, window.logical_height);
+                state.push_event(WindowEvent::Configure {
+                    window: ud.window,
+                    width: w,
+                    height: h,
+                });
             }
         }
     }
@@ -691,10 +794,13 @@ impl Dispatch<wl_pointer::WlPointer, ()> for WaylandState {
                 }
             }
             wl_pointer::Event::Button {
+                serial,
                 button,
                 state: WEnum::Value(btn_state),
                 ..
             } => {
+                // El serial de la pulsación habilita xdg_toplevel.move/resize.
+                state.last_serial = serial;
                 if let Some(window) = state.pointer_window {
                     let pressed = matches!(btn_state, wl_pointer::ButtonState::Pressed);
                     state.push_event(WindowEvent::PointerButton {
@@ -803,6 +909,31 @@ delegate_noop!(WaylandState: ignore wl_shm_pool::WlShmPool);
 delegate_noop!(WaylandState: ignore wl_data_device_manager::WlDataDeviceManager);
 delegate_noop!(WaylandState: ignore zwlr_layer_shell_v1::ZwlrLayerShellV1);
 delegate_noop!(WaylandState: ignore zwp_pointer_gestures_v1::ZwpPointerGesturesV1);
+delegate_noop!(WaylandState: ignore wp_viewporter::WpViewporter);
+delegate_noop!(WaylandState: ignore wp_viewport::WpViewport);
+delegate_noop!(WaylandState: ignore wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1);
+delegate_noop!(WaylandState: ignore zxdg_decoration_manager_v1::ZxdgDecorationManagerV1);
+
+impl Dispatch<zxdg_toplevel_decoration_v1::ZxdgToplevelDecorationV1, SurfaceUd> for WaylandState {
+    fn event(
+        state: &mut Self,
+        _: &zxdg_toplevel_decoration_v1::ZxdgToplevelDecorationV1,
+        event: zxdg_toplevel_decoration_v1::Event,
+        ud: &SurfaceUd,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if let zxdg_toplevel_decoration_v1::Event::Configure { mode } = event {
+            let server = matches!(
+                mode,
+                WEnum::Value(zxdg_toplevel_decoration_v1::Mode::ServerSide)
+            );
+            if let Some(window) = state.windows.get_mut(&ud.window) {
+                window.server_decorated = server;
+            }
+        }
+    }
+}
 
 impl Dispatch<wl_surface::WlSurface, SurfaceUd> for WaylandState {
     fn event(

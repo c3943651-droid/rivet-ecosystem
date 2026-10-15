@@ -97,6 +97,8 @@ The complete, runnable version is `crates/rivet-gui/examples/hello.rs`
 
 **v1:** re-exports + prelude + `Application`.
 
+**v0.2:** the prelude also exports the keyboard API (`KeyInput`, `keysym`, `Modifiers`); `rivet-ui` adds typed app state (`Ui::insert_state/state/state_mut`), programmatic focus (`focus_widget/next/previous`), `set_label_text`/`set_button_text` and `set_fill` for layout.
+
 **Out:** does not include tooling (`rivet-style` CLI) or seed applications (panel, launcher, AnimaEngine).
 
 ## 7. Applied decisions

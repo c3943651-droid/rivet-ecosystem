@@ -41,7 +41,7 @@ Load fonts, **rasterize glyphs**, and **compose/"shape"** text so that `rivet-ca
 - `cmap`: support formats 4 and 12 (BMP and full Unicode).
 - `glyf` outlines (TrueType) and `CFF` (PostScript OpenType).
 - Rasterization with **analytical coverage** (antialiasing), mask caching.
-- **Known limitation:** complex TrueType *hinting* (`bytecode`) is out of the initial scope; reduced sharpness at small sizes is accepted and compensated with subpixel rasterization/high PPEM.
+- **Light hinting** (v0.3): below 20px the outlines are grid-fitted before coverage — the two sides of each stem (near-vertical straight edges) are snapped together to integer columns preserving their width, and near-horizontal edges are snapped to integer rows. This keeps ~1px stems crisp instead of split across two columns. Full TrueType *hinting bytecode* remains out of scope.
 
 ## 5. Shaping and bidi (scope)
 
@@ -90,3 +90,5 @@ impl Font { pub fn layout(&self, text: &str) -> TextLayout; pub fn metrics(&self
 ## 11. Metrics (targets, to be measured — `../RIVET.md` §12)
 
 Font load/parse time, rasterization ms per glyph, cache hit ratio, RAM per loaded font, atlas VRAM, (subjective) quality at small sizes. Method: `criterion` + atlas telemetry.
+
+- **v0.3 (pixel-exact text):** the render pipeline is proven 1:1 (screen pixels == CPU coverage, verified at 14/48px). Subpixel positioning (¼px bins) is disabled below 20px (`SUBPIXEL_MIN_SIZE`): fractional pens split stroke edges across two columns (perceived "double stroke"); small text uses integer glyph positions. Below the same threshold the outlines get **light hinting** (`grid_fit`): stem edges are snapped to integer columns preserving width (sharpness of `l`/`i`/`t` rises from ~0.6 to ~0.9 on a Σc²/Σc metric), horizontal edges to integer rows. Coverage is gamma-corrected (1/2.2) so thin strokes don't wash out on dark backgrounds. Glyph quads are grid-snapped (`x.round()`, `baseline.round()`).

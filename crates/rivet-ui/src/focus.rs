@@ -40,6 +40,15 @@ impl FocusManager {
 
     /// Avanza el foco con Tab: siguiente interactive en orden de árbol.
     pub fn tab_forward(&mut self, registry: &mut WidgetRegistry) -> Result<()> {
+        self.tab_move(registry, 1)
+    }
+
+    /// Retrocede el foco con Shift+Tab: anterior interactive.
+    pub fn tab_backward(&mut self, registry: &mut WidgetRegistry) -> Result<()> {
+        self.tab_move(registry, -1)
+    }
+
+    fn tab_move(&mut self, registry: &mut WidgetRegistry, delta: i32) -> Result<()> {
         let Some(root) = registry.root() else {
             return Ok(());
         };
@@ -54,7 +63,12 @@ impl FocusManager {
             Some(id) => order
                 .iter()
                 .position(|&w| w == id)
-                .map(|index| order[(index + 1) % order.len()])
+                .map(|index| {
+                    let moved = index as i32 + delta;
+                    let len = order.len() as i32;
+                    let wrapped = (moved % len + len) % len;
+                    order[wrapped as usize]
+                })
                 .unwrap_or(order[0]),
             None => order[0],
         };

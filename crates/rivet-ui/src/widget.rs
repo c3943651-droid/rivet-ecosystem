@@ -63,6 +63,10 @@ pub struct WidgetNode {
     pub state: u8,
     /// Geometría resuelta por layout.
     pub rect: Rect,
+    /// Estirar horizontalmente en el padre (v0.2, fill).
+    pub fill_x: bool,
+    /// Estirar verticalmente en el padre (v0.2, fill).
+    pub fill_y: bool,
     /// Solicita redibujado (invalidación).
     pub dirty: bool,
 }

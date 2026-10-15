@@ -120,6 +120,9 @@ impl TextureManager {
         });
         self.vram_total += vram;
         self.uploads_this_frame += 1;
+        // El bind de arriba pisó la unidad activa sin pasar por la
+        // caché: invalidarla para que el renderer vuelva a ligar.
+        self.bound.clear();
         Ok(id)
     }
 
@@ -164,6 +167,8 @@ impl TextureManager {
                 glow::PixelUnpackData::Slice(Some(rgba)),
             );
         }
+        // Igual que create: el bind directo desincroniza la caché.
+        self.bound.clear();
         self.uploads_this_frame += 1;
         Ok(())
     }

@@ -23,15 +23,19 @@ pub fn render_tree(
     if !registry.is_alive(root) {
         return Ok(());
     }
-    render_node(registry, text, style, canvas, queue, root)
+    render_node(registry, text, style, canvas, queue, root, (0.0, 0.0))
 }
 
 fn canvas_color(color: Color) -> CanvasColor {
+    // El blending del canvas es PREMULTIPLICADO (ONE, 1-SRC_ALPHA) y los
+    // colores de estilo son straight: premultiplicar rgb×a aquí para que
+    // los translúcidos (placeholder…) mezclen bien (v0.3-fix).
+    let a = color.a as f32 / 255.0;
     CanvasColor::rgba(
-        color.r as f32 / 255.0,
-        color.g as f32 / 255.0,
-        color.b as f32 / 255.0,
-        color.a as f32 / 255.0,
+        (color.r as f32 / 255.0) * a,
+        (color.g as f32 / 255.0) * a,
+        (color.b as f32 / 255.0) * a,
+        a,
     )
 }
 
@@ -42,14 +46,23 @@ fn render_node(
     canvas: &mut rivet_canvas::GraphicsContext,
     queue: &mut RenderQueue,
     id: WidgetId,
+    offset: (f32, f32),
 ) -> Result<()> {
-    let (node_state, kind, rect) = {
+    let (node_state, kind, raw_rect) = {
         let node = registry.node(id)?;
         (node.state, node.kind, node.rect)
     };
     if node_state & state::VISIBLE == 0 {
         return Ok(());
     }
+    // Scroll (v0.3): el desplazamiento acumulado de los ancestros se
+    // resta a la posición (el clip del contenedor recorta el sobrante).
+    let rect = Rect::new(
+        raw_rect.x - offset.0,
+        raw_rect.y - offset.1,
+        raw_rect.w,
+        raw_rect.h,
+    );
     let style_state = style_state_of(node_state);
     let widget_style = style.get(style_kind_of(kind), style_state);
 
@@ -127,42 +140,100 @@ fn render_node(
             );
         }
         WidgetKind::TextInput => {
-            let shown = {
+            let (data_text, cursor, multiline) = {
                 let data = registry.text_input(id)?;
-                if data.text.is_empty() {
-                    data.placeholder.clone()
-                } else {
-                    data.text.clone()
-                }
+                (
+                    if data.text.is_empty() {
+                        data.placeholder.clone()
+                    } else {
+                        data.text.clone()
+                    },
+                    data.cursor.min(data.text.len()),
+                    data.multiline,
+                )
             };
+            let is_placeholder = registry.text_input(id)?.text.is_empty();
             let p = widget_style.padding;
-            let layout = text.layout(&shown, widget_style.font_size);
             let mut fg = widget_style.foreground;
-            if shown == registry.text_input(id)?.placeholder
-                && registry.text_input(id)?.text.is_empty()
-            {
+            if is_placeholder {
                 fg = fg.with_alpha_f(0.5);
             }
             let size = widget_style.font_size;
-            let y = rect.y + p.top;
-            text.draw(
-                &mut DrawTarget { canvas, queue },
-                DrawJob {
-                    layout: &layout,
-                    x: rect.x + p.left,
-                    y,
-                    size,
-                    color: fg,
-                },
-            );
-            // Careta (visible con foco).
-            if node_state & state::FOCUSED != 0 {
-                let caret_x = rect.x + p.left + layout.width + 1.0;
-                queue.rect(
-                    0,
-                    Rect::new(caret_x, y, 1.0, text.line_height(size)),
-                    canvas_color(widget_style.foreground),
+            let line_h = text.line_height(size);
+            let x0 = rect.x + p.left;
+            let y0 = rect.y + p.top;
+            // Multilínea (v0.3): las líneas se apilan; el cursor se
+            // posiciona por (línea, columna). Sin wrap horizontal.
+            if multiline {
+                let mut line_y = y0;
+                let mut caret = None;
+                let mut consumed = 0usize;
+                for line in data_text.split('\n') {
+                    let layout = text.layout(line, size);
+                    text.draw(
+                        &mut DrawTarget { canvas, queue },
+                        DrawJob {
+                            layout: &layout,
+                            x: x0,
+                            y: line_y,
+                            size,
+                            color: fg,
+                        },
+                    );
+                    // ¿El cursor está en esta línea?
+                    if caret.is_none() && cursor <= consumed + line.len() {
+                        let col = cursor.saturating_sub(consumed);
+                        let col = col.min(line.len());
+                        let caret_offset = if col == 0 {
+                            0.0
+                        } else {
+                            line.get(..col)
+                                .map_or(0.0, |prefix| text.layout(prefix, size).width)
+                        };
+                        caret = Some((x0 + caret_offset + 1.0, line_y));
+                    }
+                    consumed += line.len() + 1; // +1 del '\n'
+                    line_y += line_h;
+                }
+                if let Some((caret_x, caret_y)) = caret {
+                    if node_state & state::FOCUSED != 0 {
+                        queue.rect(
+                            0,
+                            Rect::new(caret_x, caret_y, 1.0, line_h),
+                            canvas_color(widget_style.foreground),
+                        );
+                    }
+                }
+            } else {
+                let layout = text.layout(&data_text, size);
+                text.draw(
+                    &mut DrawTarget { canvas, queue },
+                    DrawJob {
+                        layout: &layout,
+                        x: x0,
+                        y: y0,
+                        size,
+                        color: fg,
+                    },
                 );
+                // Careta en la posición del cursor (visible con foco).
+                if node_state & state::FOCUSED != 0 && !is_placeholder {
+                    let caret_offset = if cursor == 0 {
+                        0.0
+                    } else {
+                        // `get` devuelve None si el corte cae fuera de una
+                        // frontera de char: careta al inicio en ese caso.
+                        data_text
+                            .get(..cursor)
+                            .map_or(0.0, |prefix| text.layout(prefix, size).width)
+                    };
+                    let caret_x = x0 + caret_offset + 1.0;
+                    queue.rect(
+                        0,
+                        Rect::new(caret_x, y0, 1.0, line_h),
+                        canvas_color(widget_style.foreground),
+                    );
+                }
             }
         }
         WidgetKind::Image => {
@@ -192,9 +263,27 @@ fn render_node(
     }
 
     // Hijos al final (delante en z); recolectados para soltar el borrow.
+    // Los contenedores recortan el desbordamiento a su rect (v0.2) y los
+    // con scroll desplazan su subtree por `scroll_y` (v0.3).
     let children: Vec<WidgetId> = registry.children(id).collect();
+    let scroll_y = match kind {
+        WidgetKind::Box | WidgetKind::Panel => registry
+            .container(id)
+            .map(|c| if c.scroll { c.scroll_y } else { 0.0 })
+            .unwrap_or(0.0),
+        _ => 0.0,
+    };
+    let clips_children =
+        matches!(kind, WidgetKind::Box | WidgetKind::Panel) && rect.w > 0.0 && rect.h > 0.0;
+    if clips_children {
+        queue.push_clip(rect);
+    }
+    let child_offset = (offset.0, offset.1 + scroll_y);
     for child in children {
-        render_node(registry, text, style, canvas, queue, child)?;
+        render_node(registry, text, style, canvas, queue, child, child_offset)?;
+    }
+    if clips_children {
+        queue.pop_clip();
     }
     Ok(())
 }

@@ -8,7 +8,7 @@
 //! not depend on window — a fixed boundary of the ecosystem).
 //!
 //! v1: toplevel + layer-shell + wl_shm + keyboard/pointer/touch/gestures +
-//! text clipboard/DnD + integer HiDPI.
+//! text clipboard/DnD + fractional HiDPI (wp_fractional_scale_v1).
 //! v1.x horizon: DMA-BUF, client-side decorations.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
@@ -23,5 +23,6 @@ pub use error::{Result, WindowError};
 pub use event::{GesturePhase, KeyEvent, Modifiers, MouseButton, WindowEvent, WindowId};
 pub use shm::ShmPixels;
 pub use window::{
-    KeyboardInteractivity, Layer, LayerAnchors, LayerSurfaceOptions, Wayland, Window, WindowOptions,
+    KeyboardInteractivity, Layer, LayerAnchors, LayerSurfaceOptions, ResizeEdge, Wayland, Window,
+    WindowOptions,
 };

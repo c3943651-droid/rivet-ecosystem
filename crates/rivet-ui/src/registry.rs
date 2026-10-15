@@ -19,6 +19,15 @@ pub struct ContainerData {
     pub spacing: f32,
     /// Relleno interno.
     pub padding: rivet_style::Insets,
+    /// Scroll vertical activo (v0.3): la rueda desplaza el contenido y el
+    /// desbordamiento se recorta al rect del contenedor.
+    pub scroll: bool,
+    /// Desplazamiento vertical actual del contenido (px, ≥ 0).
+    pub scroll_y: f32,
+    /// Altura del contenido (calculada en layout).
+    pub content_h: f32,
+    /// Altura del viewport interno (calculada en layout).
+    pub viewport_h: f32,
 }
 
 /// Callback de activación de un botón.
@@ -57,8 +66,20 @@ pub struct TextInputData {
     pub text: String,
     /// Marcador cuando está vacío.
     pub placeholder: String,
+    /// Posición del cursor (offset de byte, siempre en frontera de char).
+    pub cursor: usize,
+    /// Modo multilínea (v0.3): Enter inserta saltos y el texto se apila.
+    pub multiline: bool,
     /// Callback de cambio de contenido.
     pub on_change: Option<OnChange>,
+}
+
+impl TextInputData {
+    /// Fija el contenido completo y recoloca el cursor al final.
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = text.into();
+        self.cursor = self.text.len();
+    }
 }
 
 /// Registro de widgets: nodos comunes + slabs por tipo.
@@ -161,6 +182,8 @@ impl WidgetRegistry {
             kind: WidgetKind::Box,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(
@@ -169,6 +192,10 @@ impl WidgetRegistry {
                 vertical,
                 spacing: 6.0,
                 padding: rivet_style::Insets::all(6.0),
+                scroll: false,
+                scroll_y: 0.0,
+                content_h: 0.0,
+                viewport_h: 0.0,
             }),
         );
         id
@@ -185,6 +212,8 @@ impl WidgetRegistry {
             kind: WidgetKind::Panel,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(
@@ -193,6 +222,10 @@ impl WidgetRegistry {
                 vertical,
                 spacing: 6.0,
                 padding: rivet_style::Insets::all(10.0),
+                scroll: false,
+                scroll_y: 0.0,
+                content_h: 0.0,
+                viewport_h: 0.0,
             }),
         );
         id
@@ -212,6 +245,8 @@ impl WidgetRegistry {
             kind: WidgetKind::Button,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(
@@ -235,6 +270,8 @@ impl WidgetRegistry {
             kind: WidgetKind::Label,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(id, DataSlot::Label(LabelData { text: text.into() }));
@@ -252,6 +289,8 @@ impl WidgetRegistry {
             kind: WidgetKind::Image,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(
@@ -264,8 +303,18 @@ impl WidgetRegistry {
         id
     }
 
-    /// Crea un `TextInput`.
+    /// Crea un `TextInput` de una línea.
     pub fn create_text_input(&mut self, placeholder: impl Into<String>) -> WidgetId {
+        self.insert_text_input(placeholder, false)
+    }
+
+    /// Crea un área de texto multilínea (v0.3): Enter inserta saltos de
+    /// línea, las flechas arriba/abajo mueven el cursor entre líneas.
+    pub fn create_text_area(&mut self, placeholder: impl Into<String>) -> WidgetId {
+        self.insert_text_input(placeholder, true)
+    }
+
+    fn insert_text_input(&mut self, placeholder: impl Into<String>, multiline: bool) -> WidgetId {
         let id = self.insert_node(WidgetNode {
             parent: None,
             first_child: None,
@@ -275,6 +324,8 @@ impl WidgetRegistry {
             kind: WidgetKind::TextInput,
             state: 0,
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
+            fill_x: false,
+            fill_y: false,
             dirty: true,
         });
         self.store_data(
@@ -282,6 +333,8 @@ impl WidgetRegistry {
             DataSlot::Input(TextInputData {
                 text: String::new(),
                 placeholder: placeholder.into(),
+                cursor: 0,
+                multiline,
                 on_change: None,
             }),
         );
@@ -437,6 +490,61 @@ impl WidgetRegistry {
     // Datos por tipo.
     // ------------------------------------------------------------------
 
+    /// Fija el estiramiento del widget en su contenedor (fill, v0.2).
+    ///
+    /// `horizontal`/`vertical` expanden el widget en ese eje más allá de
+    /// su tamaño preferido, repartiéndose el espacio sobrante.
+    pub fn set_fill(&mut self, id: WidgetId, horizontal: bool, vertical: bool) -> Result<()> {
+        let node = self.node_mut(id)?;
+        node.fill_x = horizontal;
+        node.fill_y = vertical;
+        node.dirty = true;
+        Ok(())
+    }
+
+    /// Estiramiento configurado (`fill_x`, `fill_y`).
+    pub fn fill(&self, id: WidgetId) -> Result<(bool, bool)> {
+        let node = self.node(id)?;
+        Ok((node.fill_x, node.fill_y))
+    }
+
+    /// Activa/desactiva el scroll vertical de un contenedor (v0.3).
+    pub fn set_scrollable(&mut self, id: WidgetId, enabled: bool) -> Result<()> {
+        let container = self.container_mut(id)?;
+        container.scroll = enabled;
+        if !enabled {
+            container.scroll_y = 0.0;
+        }
+        self.node_mut(id)?.dirty = true;
+        Ok(())
+    }
+
+    /// Desplazamiento vertical actual del contenedor (0 sin scroll).
+    pub fn scroll_offset(&self, id: WidgetId) -> Result<f32> {
+        Ok(self.container(id)?.scroll_y)
+    }
+
+    /// Métricas de scroll `(content_h, viewport_h)` del contenedor
+    /// (calculadas por el último layout).
+    pub fn scroll_metrics(&self, id: WidgetId) -> Result<(f32, f32)> {
+        let c = self.container(id)?;
+        Ok((c.content_h, c.viewport_h))
+    }
+
+    /// Reemplaza el texto de un `Label` (sin recrear el widget).
+    pub fn set_label_text(&mut self, id: WidgetId, text: impl Into<String>) -> Result<()> {
+        self.label_mut(id)?.text = text.into();
+        self.node_mut(id)?.dirty = true;
+        Ok(())
+    }
+
+    /// Reemplaza el texto de un `Button` (sin recrear el widget).
+    pub fn set_button_text(&mut self, id: WidgetId, text: impl Into<String>) -> Result<()> {
+        self.button_mut(id)?.text = text.into();
+        self.node_mut(id)?.dirty = true;
+        Ok(())
+    }
+
     fn store_data(&mut self, id: WidgetId, data: DataSlot) {
         let data_id = match data {
             DataSlot::Container(d) => self.containers.insert(d),
@@ -481,6 +589,16 @@ impl WidgetRegistry {
                 expected: "contenedor",
             }),
         }
+    }
+
+    /// Contenido de un `Button` (v0.2, consulta).
+    pub fn button_data(&self, id: WidgetId) -> Result<&ButtonData> {
+        self.button(id)
+    }
+
+    /// Contenido de un `Label` (v0.2, consulta).
+    pub fn label_data(&self, id: WidgetId) -> Result<&LabelData> {
+        self.label(id)
     }
 
     pub(crate) fn button(&self, id: WidgetId) -> Result<&ButtonData> {

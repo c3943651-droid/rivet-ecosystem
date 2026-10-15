@@ -34,6 +34,7 @@ pub struct GraphicsContext {
     target: Option<glow::Framebuffer>,
     ortho: [f32; 16],
     current_program: Option<glow::Program>,
+    scissor_on: bool,
     present_cb: Option<Box<dyn FnMut()>>,
 }
 
@@ -89,6 +90,7 @@ impl GraphicsContext {
             target: None,
             ortho: ortho_matrix(width as i32, height as i32),
             current_program: None,
+            scissor_on: false,
             present_cb: None,
         };
         Ok(this)
@@ -117,6 +119,10 @@ impl GraphicsContext {
         self.width = width as i32;
         self.height = height as i32;
         self.ortho = ortho_matrix(self.width, self.height);
+        // Forzar re-envío de la proyección: use_program la omite si el
+        // programa no cambió, y tras un resize la matriz ya es otra.
+        self.current_program = None;
+        self.textures.reset_bindings();
     }
 
     /// Sube una textura RGBA8 y devuelve su ID.
@@ -222,6 +228,14 @@ impl GraphicsContext {
             blur_i += 1;
         }
 
+        // Estado limpio para el próximo frame (clear sin scissor activo).
+        if self.scissor_on {
+            unsafe {
+                self.gl.disable(glow::SCISSOR_TEST);
+            }
+            self.scissor_on = false;
+        }
+
         stats.batches = queue.batches().len();
         stats.vertices = queue.vertex_count();
         stats.texture_uploads = self.textures.take_frame_uploads();
@@ -241,6 +255,21 @@ impl GraphicsContext {
     #[must_use]
     pub fn read_pixels(&self, x: i32, y: i32, w: u32, h: u32) -> Vec<u8> {
         let mut buf = vec![0u8; (w as usize) * (h as usize) * 4];
+        self.read_pixels_into(x, y, w, h, &mut buf);
+        buf
+    }
+
+    /// Como [`GraphicsContext::read_pixels`], pero escribe en un búfer
+    /// reutilizable del llamador (cero alocaciones por frame).
+    ///
+    /// `buf` debe medir exactamente `w × h × 4` bytes.
+    pub fn read_pixels_into(&self, x: i32, y: i32, w: u32, h: u32, buf: &mut [u8]) {
+        let len = (w as usize) * (h as usize) * 4;
+        assert_eq!(
+            buf.len(),
+            len,
+            "read_pixels_into: tamaño de búfer incorrecto"
+        );
         unsafe {
             self.gl
                 .bind_framebuffer(glow::READ_FRAMEBUFFER, self.target);
@@ -251,10 +280,9 @@ impl GraphicsContext {
                 h as _,
                 glow::RGBA,
                 glow::UNSIGNED_BYTE,
-                glow::PixelPackData::Slice(Some(buf.as_mut_slice())),
+                glow::PixelPackData::Slice(Some(&mut buf[..len])),
             );
         }
-        buf
     }
 
     fn bind_target(&mut self) {
@@ -273,6 +301,37 @@ impl GraphicsContext {
     }
 
     fn draw_batch(&mut self, batch: &Batch, stats: &mut FrameStats) {
+        // Recorte por lote (v0.2): scissor GL con Y invertida; un lote con
+        // clip degenerado (intersección vacía) no se dibuja.
+        match batch.clip {
+            Some(clip) if clip.w > 0.0 && clip.h > 0.0 => {
+                let y = self.height as f32 - (clip.y + clip.h);
+                let (x, y) = (clip.x.max(0.0) as i32, y.max(0.0) as i32);
+                let (w, h) = (clip.w as i32, clip.h as i32);
+                unsafe {
+                    self.gl.enable(glow::SCISSOR_TEST);
+                    self.gl.scissor(x, y, w, h);
+                }
+                self.scissor_on = true;
+            }
+            Some(_) => {
+                if self.scissor_on {
+                    unsafe {
+                        self.gl.disable(glow::SCISSOR_TEST);
+                    }
+                    self.scissor_on = false;
+                }
+                return; // clip vacío: nada visible de este lote
+            }
+            None => {
+                if self.scissor_on {
+                    unsafe {
+                        self.gl.disable(glow::SCISSOR_TEST);
+                    }
+                    self.scissor_on = false;
+                }
+            }
+        }
         self.use_program(batch.kind);
         if let Some(texture) = batch.texture {
             if self.textures.bind(&self.gl, texture, 0).is_ok() {

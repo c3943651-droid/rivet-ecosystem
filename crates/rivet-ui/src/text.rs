@@ -96,7 +96,13 @@ impl TextRenderer {
             color,
         } = job;
         let font = self.font_at(size).clone();
-        let baseline = y + font.metrics().ascent;
+        // Alineación a la rejilla de píxeles (v0.3-fix): el atlas solo
+        // tiene bins subpíxel HORIZONTALES; con baseline fraccional
+        // (ascent 15.5…) todo glifo caía entre dos filas/cols y el
+        // muestreo bilinear lo dejaba borroso. Redondear el origen y la
+        // baseline a enteros restaura la nitidez (pérdida ≤ 0.5 px).
+        let x = x.round();
+        let baseline = (y + font.metrics().ascent).round();
         for glyph in &layout.glyphs {
             let Some(rasterized) = self.cache.get_or_raster(
                 font.primary().data(),
@@ -115,18 +121,25 @@ impl TextRenderer {
             let Some(texture) = self.textures.get(page).copied().flatten() else {
                 continue;
             };
-            // Cobertura × tinte (premultiplicado en canvas).
+            // Cobertura × tinte (premultiplicado en canvas): el atlas ya
+            // es blanco premultiplicado y el blending del canvas espera
+            // rgb×a, así que el tinte straight se premultiplica aquí.
+            let a = color.a as f32 / 255.0;
             let tint = rivet_canvas::Color::rgba(
-                color.r as f32 / 255.0,
-                color.g as f32 / 255.0,
-                color.b as f32 / 255.0,
-                color.a as f32 / 255.0,
+                (color.r as f32 / 255.0) * a,
+                (color.g as f32 / 255.0) * a,
+                (color.b as f32 / 255.0) * a,
+                a,
             );
             queue.textured_rect(
                 0,
                 rivet_canvas::Rect::new(
                     x + glyph.x + rasterized.left,
-                    baseline - rasterized.top,
+                    // `top` es Y hacia ABAJO desde la línea base (negativo
+                    // sobre ella): el borde superior del quad es
+                    // baseline + top (v0.3-fix; antes baseline - top
+                    // dejaba el texto ~2×ascent demasiado abajo).
+                    baseline + rasterized.top,
                     rasterized.width as f32,
                     rasterized.height as f32,
                 ),

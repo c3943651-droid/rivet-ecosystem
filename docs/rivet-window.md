@@ -104,6 +104,10 @@ pub enum WindowError { ... }
 
 **v1:** connection + registry, toplevel, `wl_shm`, keyboard/pointer/touch, outputs and basic HiDPI, frame callback, basic clipboard/DnD, layer-shell for panel/launcher.
 
+**v0.3:** `Wayland::destroy_window(id)` frees a window's surface/role/viewport/buffers/pool (multi-window applications). Windows request **server-side decorations** via `zxdg_decoration_manager_v1` (`Window::decorated()` reports the granted mode) — the compositor draws the title bar and handles move/close. For compositors without SSD, `Wayland::interactive_move/interactive_resize` wrap `xdg_toplevel.move/resize` with the pointer-press serial (base for custom CSD title bars).
+
+**v0.2:** fractional HiDPI (`wp_fractional_scale_v1` + `wp_viewporter`): `Window::scale()` devuelve la escala efectiva `f32` (fraccional si el compositor la anuncia) y el buffer se dimensiona lógico × escala con redondeo; el viewport recorta el sobrante.
+
 **v1.x (measurement-driven):** DMA-BUF + `linux-drm-syncobj-v1`, advanced `fractional_scale`, gestures, server-side vs client-side decorations.
 
 **Out:** X11 (Wayland only), remote sessions, explicit multi-GPU.

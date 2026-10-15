@@ -51,6 +51,10 @@ pub trait TextureSource { fn texture(&self) -> &Texture; }
 
 Flow: `begin_frame` → emit commands (rects, text, textures) → `render` → `present`.
 
+**v0.3-fix:** `TextureManager::create/update_sub` clear the binding cache (direct `gl.bind_texture` desynced it: a new atlas page bound silently, so later "cache-hit" batches sampled the wrong texture — ghost/doubled text). `resize` resets `current_program` and texture bindings so the new projection is re-sent after window resizes (before: stale matrix → displaced/black text until the shader changed).
+
+**v0.2 (clipping):** `RenderQueue::push_clip(Rect)`/`pop_clip()` maintain a stack of intersected clip rects; batches record the active clip and the renderer applies a GL scissor per batch (degenerate clips are skipped). `GraphicsContext::read_pixels_into` reads into a caller-owned buffer (zero-alloc presentation path).
+
 ## 5. Typography and text in canvas
 
 - Consumes `rivet-typography` (rasterized glyphs as a **texture atlas**).

@@ -816,7 +816,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-base"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libc",
  "serde",
@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-canvas"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "glow",
@@ -835,7 +835,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-gui"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rivet-base",
  "rivet-canvas",
@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-image"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "image",
  "resvg",
@@ -857,7 +857,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-style"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "rivet-base",
@@ -865,7 +865,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-typography"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "fontdb 0.24.0",
@@ -875,7 +875,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-ui"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "khronos-egl",
@@ -889,7 +889,7 @@ dependencies = [
 
 [[package]]
 name = "rivet-window"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "libc",
